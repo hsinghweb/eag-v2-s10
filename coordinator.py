@@ -15,62 +15,75 @@ class Coordinator:
     async def run(self, query: str):
         print(f"\n🚀 Starting Coordinator for query: {query}")
         
-        # 1. Initialize Blackboard
-        blackboard = Blackboard(query)
-        
-        # 2. Initialize Agents
-        perception_agent = PerceptionAgent(blackboard)
-        decision_agent = DecisionAgent(blackboard)
-        executor_agent = ExecutorAgent(blackboard, self.multi_mcp)
-        retriever_agent = RetrieverAgent(blackboard, self.multi_mcp)
-        memory_agent = MemoryAgent(blackboard)
-
-        # 3. Initial Perception (Understand the User)
-        print("\n--- 🧠 Perception (User Query) ---")
-        perception = perception_agent.run(query, snapshot_type="user_query")
-        print(f"Goal: {perception.result_requirement}")
-        
-        if perception.original_goal_achieved:
-            print(f"✅ Goal Achieved immediately: {perception.solution_summary}")
-            return perception.solution_summary
-
-        # 4. Retrieve Context
-        print("\n--- 🔍 Retriever ---")
-        await retriever_agent.run(query)
-
-        # 5. Initial Planning
-        print("\n--- 📝 Decision (Initial Plan) ---")
-        step = decision_agent.run(mode="initial")
-        
-        # 6. Execution Loop
-        max_steps = 10
-        step_count = 0
-        
-        while step and step_count < max_steps:
-            step_count += 1
-            print(f"\n--- ⚙️ Step {step.step_index} Execution ---")
+        try:
+            # 1. Initialize Blackboard
+            blackboard = Blackboard(query)
             
-            # Execute
-            step = await executor_agent.run(step)
-            
-            # Check for Conclusion
-            if step.type == "CONCLUDE":
-                print(f"\n🎉 Final Answer: {step.conclusion}")
-                return step.conclusion
+            # 2. Initialize Agents
+            perception_agent = PerceptionAgent(blackboard)
+            decision_agent = DecisionAgent(blackboard)
+            executor_agent = ExecutorAgent(blackboard, self.multi_mcp)
+            retriever_agent = RetrieverAgent(blackboard, self.multi_mcp)
+            memory_agent = MemoryAgent(blackboard)
 
-            # Perception of Result
-            print("\n--- 🧠 Perception (Step Result) ---")
-            perception = perception_agent.run(
-                raw_input=f"Step: {step.description}\nResult: {step.execution_result}", 
-                snapshot_type="step_result"
-            )
+            # 3. Initial Perception (Understand the User)
+            print("\n--- 🧠 Perception (User Query) ---")
+            perception = perception_agent.run(query, snapshot_type="user_query")
+            print(f"Goal: {perception.result_requirement}")
             
             if perception.original_goal_achieved:
-                print(f"\n✅ Goal Achieved via Perception: {perception.solution_summary}")
+                print(f"✅ Goal Achieved immediately: {perception.solution_summary}")
                 return perception.solution_summary
 
-            # Replan / Next Step
-            print("\n--- 📝 Decision (Next Step) ---")
-            step = decision_agent.run(mode="replan")
+            # 4. Retrieve Context
+            print("\n--- 🔍 Retriever ---")
+            await retriever_agent.run(query)
 
-        return "❌ Max steps reached without conclusion."
+            # 5. Initial Planning
+            print("\n--- 📝 Decision (Initial Plan) ---")
+            step = decision_agent.run(mode="initial")
+            
+            # 6. Execution Loop
+            max_steps = 10
+            step_count = 0
+            
+            while step and step_count < max_steps:
+                step_count += 1
+                print(f"\n--- ⚙️ Step {step.step_index} Execution ---")
+                
+                # Execute
+                step = await executor_agent.run(step)
+                
+                # Check for Conclusion
+                if step.type == "CONCLUDE":
+                    print(f"\n🎉 Final Answer: {step.conclusion}")
+                    return step.conclusion
+
+                # Perception of Result
+                print("\n--- 🧠 Perception (Step Result) ---")
+                perception = perception_agent.run(
+                    raw_input=f"Step: {step.description}\nResult: {step.execution_result}", 
+                    snapshot_type="step_result"
+                )
+                
+                if perception.original_goal_achieved:
+                    print(f"\n✅ Goal Achieved via Perception: {perception.solution_summary}")
+                    return perception.solution_summary
+
+                # Replan / Next Step
+                print("\n--- 📝 Decision (Next Step) ---")
+                step = decision_agent.run(mode="replan")
+
+            print("❌ Max steps reached without conclusion.")
+            return "Max steps reached."
+
+        except Exception as e:
+            error_msg = str(e)
+            print(f"\n❌ Critical Error during execution: {error_msg}")
+            if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
+                conclusion = "⚠️ The system is currently experiencing high traffic (Rate Limit Exceeded). Please try again in a few minutes."
+            else:
+                conclusion = f"⚠️ An unexpected error occurred: {error_msg}"
+            
+            print(f"Conclusion: {conclusion}")
+            return conclusion
