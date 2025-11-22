@@ -1,28 +1,27 @@
 [project]
-name = "s10a"
+name = "eag-v2-s10-custom"
 version = "0.1.0"
-description = "Agentic AI"
+description = "Custom Multi-Agent System for EAG V2 Session 10"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 dependencies = [
-    "mcp[cli]>=1.7.0",
-    "pyyaml",
-    "rapidfuzz>=3.13.0",
-    "requests>=2.32.3",
-    "asyncio>=3.4.3",
-    "bs4>=0.0.2",
-    "dotenv>=0.9.9",
-    "faiss-cpu>=1.10.0",
-    "httpx>=0.28.1",
-    "llama-index>=0.12.31",
-    "llama-index-embeddings-google-genai>=0.1.0",
-    "markitdown[all]>=0.1.1",
-    "mcp[cli]>=1.6.0",
-    "pillow>=11.2.1",
-    "pydantic>=2.11.3",
-    "pymupdf4llm>=0.0.21",
-    "rich>=14.0.0",
-    "tqdm>=4.67.1",
-    "trafilatura[all]>=2.0.0",
-    "jinja2>=3.1.6",
+    "google-genai>=0.3.0",
+    "pydantic>=2.10.0",
+    "python-dotenv>=1.0.0",
+    "mcp>=1.2.0",
+    "pyyaml>=6.0.0",
+    "colorama>=0.4.6",
+    "termcolor>=2.4.0",
+    "pillow>=10.0.0",
+    "numpy>=1.26.0",
+    "faiss-cpu>=1.7.4",
+    "requests>=2.31.0",
+    "beautifulsoup4>=4.12.0",
+    "tqdm>=4.66.0"
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.0.0",
+    "black>=24.0.0"
 ]
