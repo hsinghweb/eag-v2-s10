@@ -19,7 +19,10 @@ class RetrieverAgent:
             result = await self.multi_mcp.call_tool("search_stored_documents_rag", {"query": query})
             if result:
                  # Parse result if needed, for now just store raw
-                 context_results.append(f"Local Documents: {str(result)}")
+                 result_str = str(result)
+                 context_results.append(f"Local Documents: {result_str}")
+                 print(f"📄 Retrieved {len(result_str)} characters from local documents")
+                 print(f"📊 Number of lines: {result_str.count(chr(10))}")
         except Exception as e:
             print(f"Retriever (Docs) Warning: {e}")
 

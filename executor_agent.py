@@ -14,6 +14,7 @@ class ExecutorAgent:
         
         if step.type == "CODE" and step.code:
             print(f"⚡ Executing Step {step.step_index}: {step.description}")
+            print(f"📝 Code ({len(step.code)} chars):\n{step.code}")
             
             # Execute the code using the safe executor
             result = await run_user_code(step.code, self.multi_mcp)
@@ -21,6 +22,9 @@ class ExecutorAgent:
             # Update the step with the result
             step.execution_result = str(result.get("result", result.get("error", "Unknown Error")))
             step.execution_time = result.get("execution_time")
+            
+            print(f"✅ Result length: {len(step.execution_result)} characters")
+            print(f"✅ Status: {result.get('status', 'unknown')}")
             
             if result.get("status") == "success":
                 step.status = "completed"
