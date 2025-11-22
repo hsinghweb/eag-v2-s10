@@ -66,7 +66,9 @@ class DecisionAgent:
         """
 
         try:
-            response = self.client.models.generate_content(
+            from utils import generate_with_retry
+            response = generate_with_retry(
+                client=self.client,
                 model="gemini-2.0-flash",
                 contents=prompt,
                 config={"response_mime_type": "application/json"}
