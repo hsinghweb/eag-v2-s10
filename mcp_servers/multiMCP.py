@@ -77,6 +77,8 @@ class MultiMCP:
                                     self.server_tools[server_key] = []
                                 self.server_tools[server_key].append(tool)
                     except Exception as se:
+                        import traceback
+                        traceback.print_exc()
                         print(f"❌ Session error: {se}")
             except Exception as e:
                 print(f"❌ Error initializing MCP server {config['script']}: {e}")

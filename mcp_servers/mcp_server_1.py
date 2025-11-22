@@ -234,9 +234,10 @@ def debug_error(error: str) -> list:
 # ------------------- Main -------------------
 
 if __name__ == "__main__":
-    print("mcp_server_1.py starting")
+    sys.stderr.write("mcp_server_1.py starting\n")
+    sys.stderr.flush()
     if len(sys.argv) > 1 and sys.argv[1] == "dev":
         mcp.run()  # Run without transport for dev server
     else:
         mcp.run(transport="stdio")  # Run with stdio for direct execution
-        print("\nShutting down...")
+        sys.stderr.write("\nShutting down...\n")

@@ -402,26 +402,15 @@ def ensure_faiss_ready():
 
 
 if __name__ == "__main__":
-    print("STARTING THE SERVER AT AMAZING LOCATION")
+    # Ensure logs go to stderr
+    sys.stderr.write("STARTING THE SERVER AT AMAZING LOCATION\n")
+    sys.stderr.flush()
 
     if len(sys.argv) > 1 and sys.argv[1] == "dev":
         mcp.run() # Run without transport for dev server
     else:
-        # Start the server in a separate thread
-        import threading
-        server_thread = threading.Thread(target=lambda: mcp.run(transport="stdio"))
-        server_thread.daemon = True
-        server_thread.start()
-        
-        # Wait a moment for the server to start
-        time.sleep(2)
-        
-        # Process documents after server is running
-        process_documents()
-        
-        # Keep the main thread alive
-        try:
-            while True:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            print("\nShutting down...")
+        # Run the server directly. 
+        # process_documents() will be called lazily by the tool if needed, 
+        # or we could run it here if we are sure it doesn't print to stdout.
+        # For safety, we rely on lazy loading in ensure_faiss_ready().
+        mcp.run(transport="stdio")
