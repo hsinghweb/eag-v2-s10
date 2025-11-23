@@ -58,12 +58,18 @@ WHAT TO OUTPUT (JSON):
 PRINCIPLES:
 1. **ALWAYS check CONTEXT DATA first** - if the answer is there, use `type="CONCLUDE"` immediately. Do NOT call web_search if the answer is already in context.
 2. Prefer `type="CONCLUDE"` as soon as the answer is explicitly present in context_data or the most recent tool result. Summarize the answer concisely (1-3 sentences) without asking the executor to parse strings.
-3. Only emit `type="CODE"` when an additional tool call is absolutely required to obtain missing information. Produce minimal, self-contained Python that directly returns the needed info.
-4. **For web searches, ALWAYS use web_search() function (Tavily API). NEVER import external search libraries.**
-5. **Use web_search ONLY when the information is NOT in memory or local documents.**
+3. **CRITICAL: COMBINE ALL LOGIC INTO ONE SINGLE STEP**:
+   - If a task requires multiple calculations, data transformations, or logical steps (e.g., "calculate X, then Y, then check Z"), you MUST write a **SINGLE comprehensive Python script** in ONE `CODE` step.
+   - **NEVER** break code into multiple steps like "Step 1: Calculate X", "Step 2: Calculate Y". Variables are **NOT shared** between steps.
+   - **BAD PLAN**: 
+     - Step 1: `fib = fibonacci_numbers(8)`
+     - Step 2: `fact = factorial(fib[0])` (FAILS: `fib` is undefined in Step 2)
+   - **GOOD PLAN**: 
+     - Step 1: `fib = fibonacci_numbers(8)\nfor x in fib:\n  print(factorial(x))` (WORKS: all in one script)
+4. **Variable Persistence**: Variables defined in one `CODE` step are NOT available in the next. You must re-calculate or pass values explicitly if needed. This is why combining logic into one step is crucial.
+5. **Use `print()`**: Always print the final result in your code so the Response Agent can see it.
 6. The Response Agent (LLM) will interpret tool results, so focus on getting the right data, not formatting.
-7. Always cite which source (tool/context) you relied on inside the conclusion text (e.g., mention the website or document name).
-8. Keep `plan_text` short and focused on the remaining path to the goal.
+7. Always cite which source (tool/context) you relied on inside the conclusion text.
 """
 
 class DecisionAgent:

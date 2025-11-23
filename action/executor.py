@@ -142,9 +142,23 @@ async def run_user_code(code: str, multi_mcp) -> dict:
 
         try:
             timeout = max(3, func_count * TIMEOUT_PER_FUNCTION)  # minimum 3s even for plain returns
-            returned = await asyncio.wait_for(local_vars["__main"](), timeout=timeout)
-
-            result_value = returned if returned is not None else sandbox.get("result_holder", "None")
+            
+            # Capture stdout
+            import io
+            from contextlib import redirect_stdout
+            f = io.StringIO()
+            
+            with redirect_stdout(f):
+                returned = await asyncio.wait_for(local_vars["__main"](), timeout=timeout)
+            
+            stdout_output = f.getvalue().strip()
+            
+            # Determine final result: explicit return > result_holder > stdout
+            result_value = returned
+            if result_value is None:
+                result_value = sandbox.get("result_holder", None)
+            if result_value is None or str(result_value) == "None":
+                result_value = stdout_output if stdout_output else "Executed successfully (no output)."
 
             # If result looks like tool error text, extract
             # Handle CallToolResult errors from MCP
@@ -206,5 +220,22 @@ async def run_user_code(code: str, multi_mcp) -> dict:
 # ───────────────────────────────────────────────────────────────
 def make_tool_proxy(tool_name: str, mcp):
     async def _tool_fn(*args):
-        return await mcp.function_wrapper(tool_name, *args)
+        result = await mcp.function_wrapper(tool_name, *args)
+        
+        # Unwrap CallToolResult
+        if hasattr(result, "content") and result.content:
+            text_content = result.content[0].text
+            
+            # Try to parse JSON
+            import json
+            try:
+                data = json.loads(text_content)
+                # If it's a dict with a single 'result' key, return that value
+                if isinstance(data, dict) and "result" in data and len(data) == 1:
+                    return data["result"]
+                return data
+            except json.JSONDecodeError:
+                return text_content
+        
+        return result
     return _tool_fn
