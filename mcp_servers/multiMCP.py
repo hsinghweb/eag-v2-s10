@@ -130,7 +130,13 @@ class MultiMCP:
                             text_result = result.content[0].text
                             sys.stderr.write(f"[MCP] Extracted text result ({len(text_result)} chars)\n")
                             sys.stderr.flush()
-                            return text_result
+
+                            # Attempt to parse JSON payloads automatically so agent code can treat
+                            # tool responses as native dict/list structures.
+                            try:
+                                return json.loads(text_result)
+                            except json.JSONDecodeError:
+                                return text_result
                         else:
                             # Fallback to string representation
                             str_result = str(result.content[0])
