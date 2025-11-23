@@ -6,14 +6,20 @@ from executor_agent import ExecutorAgent
 from retriever_agent import RetrieverAgent
 from memory_agent import MemoryAgent
 from mcp_servers.multiMCP import MultiMCP
+from conversation_logger import ConversationLogger
 
 class Coordinator:
     def __init__(self, multi_mcp: MultiMCP):
         self.multi_mcp = multi_mcp
+        self.logger = ConversationLogger()
         # Blackboard is initialized per session/query in run()
 
     async def run(self, query: str):
         print(f"\n🚀 Starting Coordinator for query: {query}")
+        print(f"📝 Conversation log: {self.logger.get_log_path()}")
+        
+        # Log user query
+        self.logger.log_user_query(query)
         
         try:
             # 1. Initialize Blackboard
@@ -31,17 +37,38 @@ class Coordinator:
             perception = perception_agent.run(query, snapshot_type="user_query")
             print(f"Goal: {perception.result_requirement}")
             
+            # Log perception
+            self.logger.log_perception("user_query", {
+                "entities": perception.entities,
+                "result_requirement": perception.result_requirement,
+                "original_goal_achieved": perception.original_goal_achieved,
+                "confidence": perception.confidence
+            })
+            
             if perception.original_goal_achieved:
                 print(f"✅ Goal Achieved immediately: {perception.solution_summary}")
+                self.logger.log_conclusion(perception.solution_summary)
                 return perception.solution_summary
 
             # 4. Retrieve Context
             print("\n--- 🔍 Retriever ---")
             await retriever_agent.run(query)
+            
+            # Log retrieval
+            num_sources = len(blackboard.state.context_data.get("initial_retrieval", "").split("\n"))
+            self.logger.log_retriever(query, num_sources)
 
             # 5. Initial Planning
             print("\n--- 📝 Decision (Initial Plan) ---")
             step = decision_agent.run(mode="initial")
+            
+            # Log decision
+            self.logger.log_decision("initial", [], {
+                "step_index": step.step_index,
+                "description": step.description,
+                "type": step.type,
+                "code": step.code if step.code else ""
+            })
             
             # 6. Execution Loop
             max_steps = 10
@@ -54,9 +81,18 @@ class Coordinator:
                 # Execute
                 step = await executor_agent.run(step)
                 
+                # Log execution
+                self.logger.log_executor(
+                    step.step_index,
+                    step.status,
+                    step.execution_result or "",
+                    str(step.execution_time) if step.execution_time else ""
+                )
+                
                 # Check for Conclusion
                 if step.type == "CONCLUDE":
                     print(f"\n🎉 Final Answer: {step.conclusion}")
+                    self.logger.log_conclusion(step.conclusion)
                     return step.conclusion
 
                 # Perception of Result
@@ -66,15 +102,34 @@ class Coordinator:
                     snapshot_type="step_result"
                 )
                 
+                # Log perception
+                self.logger.log_perception("step_result", {
+                    "entities": perception.entities,
+                    "result_requirement": perception.result_requirement,
+                    "original_goal_achieved": perception.original_goal_achieved,
+                    "confidence": perception.confidence,
+                    "solution_summary": perception.solution_summary if perception.solution_summary else ""
+                })
+                
                 if perception.original_goal_achieved:
                     print(f"\n✅ Goal Achieved via Perception: {perception.solution_summary}")
+                    self.logger.log_conclusion(perception.solution_summary)
                     return perception.solution_summary
 
                 # Replan / Next Step
                 print("\n--- 📝 Decision (Next Step) ---")
                 step = decision_agent.run(mode="replan")
+                
+                # Log decision
+                self.logger.log_decision("replan", [], {
+                    "step_index": step.step_index,
+                    "description": step.description,
+                    "type": step.type,
+                    "code": step.code if step.code else ""
+                })
 
             print("❌ Max steps reached without conclusion.")
+            self.logger.log_conclusion("Max steps reached without conclusion.")
             return "Max steps reached."
 
         except Exception as e:
@@ -86,4 +141,5 @@ class Coordinator:
                 conclusion = f"⚠️ An unexpected error occurred: {error_msg}"
             
             print(f"Conclusion: {conclusion}")
+            self.logger.log_conclusion(conclusion)
             return conclusion

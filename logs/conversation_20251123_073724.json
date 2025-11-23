@@ -1,0 +1,10 @@
+[
+  {
+    "turn_id": 0,
+    "role": "user",
+    "content": {
+      "query": "Test query"
+    },
+    "timestamp": "2025-11-23T07:37:24.682672Z"
+  }
+]
