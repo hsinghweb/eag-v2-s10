@@ -13,10 +13,15 @@ Given the latest perception, retrieved context, and prior tool runs, decide the 
 
 CRITICAL: All tools are already registered and available as Python functions. DO NOT import external libraries like duckduckgo_search, serpapi, or googlesearch. Use the registered MCP tools directly.
 
+**DATA SOURCE PRIORITY** (ALWAYS follow this order):
+1. **FIRST**: Check if the answer is in CONTEXT DATA (from retriever/memory) - this includes past session memory and local documents
+2. **SECOND**: If not found, use `search_stored_documents_rag(query)` to search local documents
+3. **LAST RESORT**: Only use `web_search(query, max_results=5)` if the information is NOT available in memory or local documents
+
 Available Tools (call them as regular Python functions):
 - Math: add(a, b), subtract(a, b), multiply(a, b), divide(a, b), power(base, exp), cbrt(x), factorial(n), remainder(a, b), sin(x), cos(x), tan(x)
 - Documents: search_stored_documents_rag(query), convert_webpage_url_into_markdown(url), extract_pdf(url)
-- **Web Search (TAVILY)**: web_search(query, max_results=5) - Returns structured search results from Tavily API
+- **Web Search (TAVILY)**: web_search(query, max_results=5) - Returns structured search results from Tavily API - **USE ONLY AS LAST RESORT**
 - Web Content: download_raw_html_from_url(url)
 - Utility: mine(), create_thumbnail(url), strings_to_chars_to_int(strings), int_list_to_exponential_sum(numbers), fibonacci_numbers(n)
 
@@ -51,12 +56,14 @@ WHAT TO OUTPUT (JSON):
 }
 
 PRINCIPLES:
-1. Prefer `type="CONCLUDE"` as soon as the answer is explicitly present in context_data or the most recent tool result. Summarize the answer concisely (1-3 sentences) without asking the executor to parse strings.
-2. Only emit `type="CODE"` when an additional tool call is absolutely required to obtain missing information. Produce minimal, self-contained Python that directly returns the needed info.
-3. **For web searches, ALWAYS use web_search() function (Tavily API). NEVER import external search libraries.**
-4. The Response Agent (LLM) will interpret tool results, so focus on getting the right data, not formatting.
-5. Always cite which source (tool/context) you relied on inside the conclusion text (e.g., mention the website or document name).
-6. Keep `plan_text` short and focused on the remaining path to the goal.
+1. **ALWAYS check CONTEXT DATA first** - if the answer is there, use `type="CONCLUDE"` immediately. Do NOT call web_search if the answer is already in context.
+2. Prefer `type="CONCLUDE"` as soon as the answer is explicitly present in context_data or the most recent tool result. Summarize the answer concisely (1-3 sentences) without asking the executor to parse strings.
+3. Only emit `type="CODE"` when an additional tool call is absolutely required to obtain missing information. Produce minimal, self-contained Python that directly returns the needed info.
+4. **For web searches, ALWAYS use web_search() function (Tavily API). NEVER import external search libraries.**
+5. **Use web_search ONLY when the information is NOT in memory or local documents.**
+6. The Response Agent (LLM) will interpret tool results, so focus on getting the right data, not formatting.
+7. Always cite which source (tool/context) you relied on inside the conclusion text (e.g., mention the website or document name).
+8. Keep `plan_text` short and focused on the remaining path to the goal.
 """
 
 class DecisionAgent:
