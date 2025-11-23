@@ -13,7 +13,7 @@ from datetime import datetime
 ALLOWED_MODULES = {
     "math", "cmath", "decimal", "fractions", "random", "statistics", "itertools", "functools", "operator", "string", "re", "datetime", "calendar", "time", "collections", "heapq", "bisect", "types", "copy", "enum", "uuid", "dataclasses", "typing", "pprint", "json", "base64", "hashlib", "hmac", "secrets", "struct", "zlib", "gzip", "bz2", "lzma", "io", "pathlib", "tempfile", "textwrap", "difflib", "unicodedata", "html", "html.parser", "xml", "xml.etree.ElementTree", "csv", "sqlite3", "contextlib", "traceback", "ast", "tokenize", "token", "builtins"
 }
-MAX_FUNCTIONS = 5
+MAX_FUNCTIONS = 50
 TIMEOUT_PER_FUNCTION = 500  # seconds
 
 class KeywordStripper(ast.NodeTransformer):
