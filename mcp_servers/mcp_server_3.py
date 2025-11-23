@@ -1,7 +1,21 @@
+# mcp_server_3.py – Web search MCP server
+
+"""Provides two tools for the Multi‑Agent System:
+
+* ``web_search`` – uses the Tavily API to perform a web search and returns a
+  dictionary containing the raw ``results`` list and a human‑readable ``formatted``
+  string.
+* ``download_raw_html_from_url`` – fetches a URL and returns the cleaned text
+  content.
+
+The implementation is deliberately lightweight and avoids any duplicate
+definitions or stray emojis that caused UnicodeEncodeError on Windows.
+"""
+
 from mcp.server.fastmcp import FastMCP, Context
 import httpx
 from bs4 import BeautifulSoup
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Any
 import sys
 import traceback
 import asyncio
@@ -12,84 +26,97 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 
-# Load .env from project root explicitly
+# ---------------------------------------------------------------------------
+# Environment setup
+# ---------------------------------------------------------------------------
 env_path = Path(__file__).parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
+# ---------------------------------------------------------------------------
+# Helper classes
+# ---------------------------------------------------------------------------
 class RateLimiter:
+    """Simple rate limiter – max *requests_per_minute* calls per minute."""
+
     def __init__(self, requests_per_minute: int = 30):
         self.requests_per_minute = requests_per_minute
-        self.requests = []
+        self.requests: List[datetime] = []
 
-    async def acquire(self):
+    async def acquire(self) -> None:
         now = datetime.now()
-        self.requests = [
-            req for req in self.requests if now - req < timedelta(minutes=1)
-        ]
-
+        # Keep only timestamps within the last minute
+        self.requests = [req for req in self.requests if now - req < timedelta(minutes=1)]
         if len(self.requests) >= self.requests_per_minute:
-            wait_time = 60 - (now - self.requests[0]).total_seconds()
-            if wait_time > 0:
-                await asyncio.sleep(wait_time)
-
+            wait = 60 - (now - self.requests[0]).total_seconds()
+            if wait > 0:
+                await asyncio.sleep(wait)
         self.requests.append(now)
 
 
 class TavilySearcher:
+    """Thin wrapper around ``tavily`` with deterministic logging."""
+
     def __init__(self):
         api_key = os.getenv("TAVILY_API_KEY")
         if not api_key:
-            sys.stderr.write("WARNING: TAVILY_API_KEY not found in .env file. Web search will fail.\n")
+            sys.stderr.write(
+                "WARNING: TAVILY_API_KEY not found in .env file. Web search will fail.\n"
+            )
             sys.stderr.flush()
         self.client = TavilyClient(api_key=api_key) if api_key else None
 
     def format_results_for_llm(self, results: List[Dict[str, Any]]) -> str:
         if not results:
             return "No results were found for your search query."
-
-        output = []
-        output.append(f"Found {len(results)} search results:\n")
-
-        for i, result in enumerate(results, 1):
-            output.append(f"{i}. {result.get('title', 'No Title')}")
-            output.append(f"   URL: {result.get('url', 'No URL')}")
-            output.append(f"   Summary: {result.get('content', 'No Summary')}")
-            output.append("")
-
-        return "\n".join(output)
+        lines = [f"Found {len(results)} search results:\n"]
+        for i, r in enumerate(results, 1):
+            lines.append(f"{i}. {r.get('title', 'No Title')}")
+            lines.append(f"   URL: {r.get('url', 'No URL')}")
+            lines.append(f"   Summary: {r.get('content', 'No Summary')}")
+            lines.append("")
+        return "\n".join(lines)
 
     def search_sync(self, query: str, max_results: int = 10) -> List[Dict[str, Any]]:
-        """Synchronous search method"""
+        sys.stderr.write("\n--- TavilySearcher.search_sync ---\n")
+        sys.stderr.flush()
         try:
             if not self.client:
-                sys.stderr.write("ERROR: Tavily client not initialized\n")
+                sys.stderr.write("[ERROR] Tavily client not initialized\n")
                 sys.stderr.flush()
                 return []
-                
-            sys.stderr.write(f"DEBUG: Searching Tavily for '{query}' with max_results={max_results}\n")
+            sys.stderr.write("[OK] Tavily client exists\n")
+            sys.stderr.write("[INFO] Calling Tavily API...\n")
             sys.stderr.flush()
-            
-            # Direct synchronous call - no threading
             response = self.client.search(
                 query=query,
                 max_results=max_results,
                 include_answer=False,
-                include_raw_content=False
+                include_raw_content=False,
             )
-            results = response.get('results', [])
-            
-            sys.stderr.write(f"DEBUG: Found {len(results)} results\n")
+            sys.stderr.write("[OK] Tavily API responded\n")
+            sys.stderr.write(f"[INFO] Response type: {type(response)}\n")
+            sys.stderr.flush()
+            results = response.get("results", [])
+            sys.stderr.write(f"[OK] Extracted {len(results)} results\n")
+            if results:
+                sys.stderr.write(
+                    f"[INFO] First result title: {results[0].get('title', 'N/A')[:50]}\n"
+                )
+            sys.stderr.write("--- End search_sync ---\n\n")
             sys.stderr.flush()
             return results
-
         except Exception as e:
-            sys.stderr.write(f"DEBUG: Error in Tavily search: {e}\n")
+            sys.stderr.write(
+                f"[ERROR] EXCEPTION in search_sync: {type(e).__name__}: {str(e)}\n"
+            )
             sys.stderr.flush()
             traceback.print_exc(file=sys.stderr)
             return []
 
 
 class WebContentFetcher:
+    """Fetches a URL and returns plain text (max 8000 chars)."""
+
     def __init__(self):
         self.rate_limiter = RateLimiter(requests_per_minute=20)
 
@@ -97,32 +124,26 @@ class WebContentFetcher:
         try:
             await self.rate_limiter.acquire()
             await ctx.info(f"Fetching content from: {url}")
-
             async with httpx.AsyncClient() as client:
-                result = await client.get(
+                resp = await client.get(
                     url,
-                    headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"},
+                    headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
                     follow_redirects=True,
                     timeout=30.0,
                 )
-                result.raise_for_status()
-
-            soup = BeautifulSoup(result.text, "html.parser")
-            for element in soup(["script", "style", "nav", "header", "footer"]):
-                element.decompose()
-
+                resp.raise_for_status()
+            soup = BeautifulSoup(resp.text, "html.parser")
+            for el in soup(["script", "style", "nav", "header", "footer"]):
+                el.decompose()
             text = soup.get_text()
             lines = (line.strip() for line in text.splitlines())
             chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-            text = " ".join(chunk for chunk in chunks if chunk)
-            text = re.sub(r"\s+", " ", text).strip()
-
-            if len(text) > 8000:
-                text = text[:8000] + "... [content truncated]"
-
-            await ctx.info(f"Successfully fetched and parsed content ({len(text)} characters)")
-            return text
-
+            cleaned = " ".join(chunk for chunk in chunks if chunk)
+            cleaned = re.sub(r"\s+", " ", cleaned).strip()
+            if len(cleaned) > 8000:
+                cleaned = cleaned[:8000] + "... [content truncated]"
+            await ctx.info(f"Successfully fetched and parsed content ({len(cleaned)} characters)")
+            return cleaned
         except httpx.TimeoutException:
             await ctx.error(f"Request timed out for URL: {url}")
             return "Error: The request timed out while trying to fetch the webpage."
@@ -133,30 +154,51 @@ class WebContentFetcher:
             await ctx.error(f"Error fetching content from {url}: {str(e)}")
             return f"Error: An unexpected error occurred while fetching the webpage ({str(e)})"
 
-
-# Initialize FastMCP server
+# ---------------------------------------------------------------------------
+# MCP server initialisation
+# ---------------------------------------------------------------------------
 mcp = FastMCP("web-search")
 searcher = TavilySearcher()
 fetcher = WebContentFetcher()
 
-
+# ---------------------------------------------------------------------------
+# Tool definitions
+# ---------------------------------------------------------------------------
 @mcp.tool()
-def web_search(query: str, max_results: int = 5) -> str:
-    """Search the web using Tavily API."""
+async def web_search(query: str, max_results: int = 5) -> dict:
+    """Search the web via Tavily and return ``{"results": ..., "formatted": ...}``."""
+    sys.stderr.write("\n" + "=" * 60 + "\n")
+    sys.stderr.write("[TOOL] web_search called with:\n")
+    sys.stderr.write(f"   query: {query}\n")
+    sys.stderr.write(f"   max_results: {max_results}\n")
+    sys.stderr.flush()
     try:
-        results = searcher.search_sync(query, max_results)
-        return searcher.format_results_for_llm(results)
+        sys.stderr.write("[INFO] Calling searcher.search_sync...\n")
+        sys.stderr.flush()
+        results = await asyncio.to_thread(searcher.search_sync, query, max_results)
+        sys.stderr.write(f"[OK] search_sync returned {len(results)} results\n")
+        sys.stderr.flush()
+        formatted = searcher.format_results_for_llm(results)
+        sys.stderr.write(f"[OK] Formatted result length: {len(formatted)} chars\n")
+        sys.stderr.flush()
+        return {"results": results, "formatted": formatted}
     except Exception as e:
+        sys.stderr.write(
+            f"[ERROR] EXCEPTION in web_search: {type(e).__name__}: {str(e)}\n"
+        )
+        sys.stderr.flush()
         traceback.print_exc(file=sys.stderr)
-        return f"An error occurred while searching: {str(e)}"
+        return {"error": f"An error occurred while searching: {str(e)}"}
 
 
 @mcp.tool()
 async def download_raw_html_from_url(url: str, ctx: Context) -> str:
-    """Fetch webpage content."""
+    """Fetch a URL and return cleaned text content."""
     return await fetcher.fetch_and_parse(url, ctx)
 
-
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
 if __name__ == "__main__":
     sys.stderr.write("mcp_server_3.py starting\n")
     sys.stderr.flush()
@@ -165,3 +207,4 @@ if __name__ == "__main__":
     else:
         mcp.run(transport="stdio")
         sys.stderr.write("\nShutting down...\n")
+        sys.stderr.flush()

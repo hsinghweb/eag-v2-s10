@@ -79,9 +79,9 @@ class MultiMCP:
                     except Exception as se:
                         import traceback
                         traceback.print_exc()
-                        print(f"❌ Session error: {se}")
+                        print(f"[ERROR] Session error: {se}")
             except Exception as e:
-                print(f"❌ Error initializing MCP server {config['script']}: {e}")
+                print(f"[ERROR] Error initializing MCP server {config['script']}: {e}")
 
     async def call_tool(self, tool_name: str, arguments: dict) -> Any:
         entry = self.tool_map.get(tool_name)
@@ -103,10 +103,52 @@ class MultiMCP:
             env=os.environ.copy()  # Pass current environment to subprocess
         )
 
-        async with stdio_client(params) as (read, write):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-                return await session.call_tool(tool_name, arguments)
+        try:
+            sys.stderr.write(f"[MCP] Calling tool '{tool_name}' with args: {arguments}\n")
+            sys.stderr.flush()
+            
+            async with stdio_client(params) as (read, write):
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
+                    sys.stderr.write(f"[MCP] Session initialized, calling tool...\n")
+                    sys.stderr.flush()
+                    
+                    result = await session.call_tool(tool_name, arguments)
+                    
+                    sys.stderr.write(f"[MCP] Tool returned, type: {type(result)}\n")
+                    sys.stderr.write(f"[MCP] Has 'content' attr: {hasattr(result, 'content')}\n")
+                    sys.stderr.write(f"[MCP] Has 'isError' attr: {hasattr(result, 'isError')}\n")
+                    if hasattr(result, 'isError'):
+                        sys.stderr.write(f"[MCP] isError value: {result.isError}\n")
+                    sys.stderr.flush()
+                    
+                    # CRITICAL FIX: Extract actual content from CallToolResult
+                    # The MCP client returns a CallToolResult object, we need to unwrap it
+                    if hasattr(result, 'content') and result.content:
+                        # Extract text from first content item
+                        if hasattr(result.content[0], 'text'):
+                            text_result = result.content[0].text
+                            sys.stderr.write(f"[MCP] Extracted text result ({len(text_result)} chars)\n")
+                            sys.stderr.flush()
+                            return text_result
+                        else:
+                            # Fallback to string representation
+                            str_result = str(result.content[0])
+                            sys.stderr.write(f"[MCP] Fallback to str ({len(str_result)} chars)\n")
+                            sys.stderr.flush()
+                            return str_result
+                    else:
+                        # If no content attribute, return as-is (shouldn't happen)
+                        sys.stderr.write(f"[MCP] No content attribute, returning as-is\n")
+                        sys.stderr.flush()
+                        return result
+                        
+        except Exception as e:
+            sys.stderr.write(f"[MCP ERROR] Exception in call_tool: {type(e).__name__}: {str(e)}\n")
+            sys.stderr.flush()
+            import traceback
+            traceback.print_exc(file=sys.stderr)
+            raise
 
 
 

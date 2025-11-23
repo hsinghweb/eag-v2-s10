@@ -35,8 +35,17 @@ class AwaitTransformer(ast.NodeTransformer):
     def __init__(self, async_funcs):
         self.async_funcs = async_funcs
 
+    def visit_Await(self, node):
+        # Mark inner call so we don't wrap it again
+        if isinstance(node.value, ast.Call):
+            setattr(node.value, "_skip_auto_await", True)
+        node.value = self.visit(node.value)
+        return node
+
     def visit_Call(self, node):
         self.generic_visit(node)
+        if getattr(node, "_skip_auto_await", False):
+            return node
         if isinstance(node.func, ast.Name) and node.func.id in self.async_funcs:
             return ast.Await(value=node)
         return node
