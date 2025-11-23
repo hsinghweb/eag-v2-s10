@@ -13,6 +13,8 @@ wheels/
 
 mcp_servers/documents
 mcp_servers/faiss_index
+logs/
+
 
 # Virtual environments
 .venv
