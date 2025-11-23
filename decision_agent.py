@@ -8,49 +8,40 @@ from agent_state import PlanStep, Blackboard, ToolCode
 load_dotenv()
 
 DECISION_PROMPT = """
-You are the Decision Agent (The Planner).
-Your goal is to create a step-by-step plan to solve the user's query, or update the plan based on new information.
+You are the Decision Agent (planner + answer synthesizer).
+Given the latest perception, retrieved context, and prior tool runs, decide the single most useful next action.
 
-AVAILABLE TOOLS (Call these directly, DO NOT use prefixes like 'math.' or 'websearch.'):
-Math Tools:
-- add(a, b), subtract(a, b), multiply(a, b), divide(a, b), power(base, exponent)
-- cbrt(x), factorial(n), remainder(a, b), sin(x), cos(x), tan(x)
+Available Tools (invoke directly, no namespaces):
+- Math: add, subtract, multiply, divide, power, cbrt, factorial, remainder, sin, cos, tan
+- Documents: search_stored_documents_rag, convert_webpage_url_into_markdown, extract_pdf
+- Web: web_search, download_raw_html_from_url
+- Utility: mine, create_thumbnail, strings_to_chars_to_int, int_list_to_exponential_sum, fibonacci_numbers
 
-Document Tools:
-- search_stored_documents_rag(query) - Search indexed documents and memory
-- convert_webpage_url_into_markdown(url) - Extract webpage content
-- extract_pdf(file_path) - Convert PDF to markdown
+INPUT YOU RECEIVE:
+1. Perception snapshot (ERORLL) describing the goal status.
+2. Context data (aggregated retrieval + memory).
+3. Most recent tool result (if any).
+4. Execution history.
+5. Mode ("initial" or "replan").
 
-Web Search Tools:
-- web_search(query, max_results=5) - Search the web using Tavily API (NOTE: parameter is 'max_results')
-- download_raw_html_from_url(url) - Fetch raw HTML
-
-Utility Tools:
-- mine(), create_thumbnail(), strings_to_chars_to_int(), int_list_to_exponential_sum(), fibonacci_numbers()
-
-INPUT:
-1. Perception Snapshot: The latest analysis of the situation.
-2. History: Previous steps and results.
-3. Mode: "initial" (start of task) or "replan" (after a step).
-
-OUTPUT (JSON):
+WHAT TO OUTPUT (JSON):
 {
-    "plan_text": ["Step 1: ...", "Step 2: ..."],
-    "next_step": {
-        "step_index": int,
-        "description": "What to do next",
-        "type": "CODE" | "CONCLUDE" | "NOP",
-        "code": "full python code to execute (if type is CODE)",
-        "conclusion": "Final answer text (if type is CONCLUDE)"
-    }
+  "plan_text": ["Step 1: ...", "Step 2: ..."],
+  "next_step": {
+    "step_index": int,
+    "description": "...",
+    "type": "CODE" | "CONCLUDE" | "NOP",
+    "code": "python code (only when type == CODE)",
+    "conclusion": "final short answer (only when type == CONCLUDE)"
+  }
 }
 
-RULES:
-- Use `await` for tool calls.
-- CRITICAL: Call tools DIRECTLY by name. Example: `await add(a=1, b=2)`, NOT `await math.add(...)`.
-- If the goal is achieved (based on Perception), output type="CONCLUDE".
-- If a step failed, try a different approach or tool.
-- Keep plans concise.
+PRINCIPLES:
+1. Prefer `type="CONCLUDE"` as soon as the answer is explicitly present in context_data or the most recent tool result. Summarize the answer concisely (1-3 sentences) without asking the executor to parse strings.
+2. Only emit `type="CODE"` when an additional tool call is absolutely required to obtain missing information. Produce minimal, self-contained Python that directly returns the needed info.
+3. Avoid regex/string-chopping—let tools or the LLM reasoning extract answers. Use the provided context instead of re-processing long text manually.
+4. Always cite which source (tool/context) you relied on inside the conclusion text (e.g., mention the website or document name).
+5. Keep `plan_text` short and focused on the remaining path to the goal.
 """
 
 class DecisionAgent:
@@ -63,12 +54,27 @@ class DecisionAgent:
         state = self.blackboard.state
         perception = state.latest_perception
         history = self.blackboard.get_history_text()
+        context_blob = json.dumps(state.context_data, indent=2, ensure_ascii=False) if state.context_data else "None"
+
+        recent_result = "None"
+        plan = state.get_current_plan()
+        if plan:
+            for step in reversed(plan):
+                if step.execution_result:
+                    recent_result = step.execution_result
+                    break
         
         prompt = f"""
         {DECISION_PROMPT}
 
         --- PERCEPTION ---
         {perception.model_dump_json(indent=2) if perception else "None"}
+
+        --- CONTEXT DATA (from retriever/memory) ---
+        {context_blob}
+
+        --- MOST RECENT TOOL RESULT ---
+        {recent_result}
 
         --- HISTORY ---
         {history}

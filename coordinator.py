@@ -75,7 +75,7 @@ class Coordinator:
             })
             
             # 6. Execution Loop
-            max_steps = 10
+            max_steps = 20
             step_count = 0
             
             while step and step_count < max_steps:
