@@ -48,6 +48,12 @@ class GlobalAgentState(BaseModel):
     # Current Context
     latest_perception: Optional[PerceptionSnapshot] = None
     context_data: Dict[str, Any] = Field(default_factory=dict) # From Retriever
+    
+    @property
+    def user_query(self) -> str:
+        """Alias for original_query for backward compatibility"""
+        return self.original_query
+
 
     def add_plan_version(self, steps: List[PlanStep]):
         self.plan_versions.append(steps)
