@@ -125,7 +125,17 @@ async def run_user_code(code: str, multi_mcp) -> dict:
             tree.body.append(ast.Return(value=ast.Name(id="result", ctx=ast.Load())))
 
         tree = KeywordStripper().visit(tree) # strip "key" = "value" cases to only "value"
-        tree = AwaitTransformer(set(tool_funcs)).visit(tree)
+        
+        # Detect locally defined functions that shadow tools
+        local_defs = set()
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                local_defs.add(node.name)
+        
+        # Only auto-await tools that are NOT shadowed by local definitions
+        safe_tools_to_await = set(tool_funcs) - local_defs
+        
+        tree = AwaitTransformer(safe_tools_to_await).visit(tree)
         ast.fix_missing_locations(tree)
 
         func_def = ast.AsyncFunctionDef(

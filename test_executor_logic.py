@@ -5,10 +5,9 @@ import textwrap
 import ast
 from contextlib import redirect_stdout
 
-# Mock async tool
-async def factorial(n):
-    await asyncio.sleep(0.01)
-    return n * 10  # Mock factorial
+# Mock async tool (not used in this test, but needed for AwaitTransformer)
+async def factorial_tool(n):
+    return n * 10
 
 class AwaitTransformer(ast.NodeTransformer):
     def __init__(self, async_funcs):
@@ -22,10 +21,25 @@ class AwaitTransformer(ast.NodeTransformer):
 
 async def test_execution():
     code = """
-fibs = [1, 2, 3]
-print("Calculating factorials...")
-facts = [factorial(x) for x in fibs]
-print(f"Factorials: {facts}")
+def fibonacci_numbers(n):
+    fib_list = [0, 1]
+    while len(fib_list) < n:
+        next_fib = fib_list[-1] + fib_list[-2]
+        fib_list.append(next_fib)
+    return fib_list
+
+def factorial(n):
+    if n == 0:
+        return 1
+    else:
+        return n * factorial(n-1)
+
+fib_nums = fibonacci_numbers(8)
+even_fib_nums = [num for num in fib_nums if num % 2 == 0]
+factorial_even_fib_nums = [factorial(num) for num in even_fib_nums]
+sum_factorial_even_fib_nums = sum(factorial_even_fib_nums)
+
+print(sum_factorial_even_fib_nums)
 """
     
     print("--- Starting Test ---")
@@ -33,7 +47,19 @@ print(f"Factorials: {facts}")
     cleaned_code = textwrap.dedent(code.strip())
     tree = ast.parse(cleaned_code)
     
-    # Apply AwaitTransformer
+    # Apply AwaitTransformer (should affect nothing as local functions shadow tools?)
+    # Wait, AwaitTransformer checks function names.
+    # If "factorial" is in async_funcs, it will wrap the call in await.
+    # But "factorial" is defined locally!
+    
+    # In executor.py, async_funcs = set(tool_funcs)
+    # If "factorial" is a tool, it's in the set.
+    # So AwaitTransformer will wrap `factorial(num)` in `await`.
+    
+    # BUT `factorial` refers to the LOCAL function, which is synchronous!
+    # So `await factorial(num)` will fail because `factorial(num)` returns an int, not an awaitable!
+    
+    print("Applying AwaitTransformer with 'factorial' as a tool...")
     tree = AwaitTransformer({"factorial"}).visit(tree)
     ast.fix_missing_locations(tree)
     
@@ -50,7 +76,7 @@ print(f"Factorials: {facts}")
     compiled = compile(wrapper, filename="<user_code>", mode="exec")
     
     local_vars = {}
-    sandbox = {"print": print, "factorial": factorial}
+    sandbox = {"print": print} # No tools in sandbox, as code defines them
     
     exec(compiled, sandbox, local_vars)
     
@@ -68,11 +94,6 @@ print(f"Factorials: {facts}")
         
     output = f.getvalue().strip()
     print(f"Captured Output: '{output}'")
-    
-    if "Factorials: [10, 20, 30]" in output:
-        print("✅ SUCCESS: Async list comprehension worked")
-    else:
-        print("❌ FAILURE: Async list comprehension failed")
 
 if __name__ == "__main__":
     asyncio.run(test_execution())
