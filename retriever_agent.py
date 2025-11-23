@@ -18,11 +18,16 @@ class RetrieverAgent:
             # We use a broad search first
             result = await self.multi_mcp.call_tool("search_stored_documents_rag", {"query": query})
             if result:
-                 # Parse result if needed, for now just store raw
-                 result_str = str(result)
-                 context_results.append(f"Local Documents: {result_str}")
+                 # FIXED: Properly handle list[str] results from RAG
+                 if isinstance(result, list):
+                     # Join list items with double newlines for readability
+                     result_str = "\n\n".join(str(item) for item in result)
+                 else:
+                     result_str = str(result)
+                 
+                 context_results.append(f"Local Documents:\n{result_str}")
                  print(f"📄 Retrieved {len(result_str)} characters from local documents")
-                 print(f"📊 Number of lines: {result_str.count(chr(10))}")
+                 print(f"📊 Number of chunks: {len(result) if isinstance(result, list) else 1}")
         except Exception as e:
             print(f"Retriever (Docs) Warning: {e}")
 
