@@ -49,7 +49,18 @@ class Coordinator:
                 print(f"✅ Goal Achieved immediately: {perception.solution_summary}")
                 self.logger.log_conclusion(perception.solution_summary)
                 
-                # Save Session Memory
+                # Save to Memory FAISS (if high confidence)
+                source = blackboard.state.context_data.get("source", "unknown")
+                await memory_agent.save_successful_answer(
+                    query=query,
+                    answer=perception.solution_summary,
+                    confidence=perception.confidence,
+                    source=source,
+                    goal_achieved=True,
+                    session_id=blackboard.state.session_id
+                )
+                
+                # Save Session Memory (JSON backup)
                 memory_agent.save_session_memory(blackboard.state.session_id, blackboard.get_snapshot())
                 
                 return perception.solution_summary
@@ -123,7 +134,18 @@ class Coordinator:
                     print(f"\n✅ Goal Achieved via Perception: {perception.solution_summary}")
                     self.logger.log_conclusion(perception.solution_summary)
                     
-                    # Save Session Memory
+                    # Save to Memory FAISS (if high confidence)
+                    source = blackboard.state.context_data.get("source", "unknown")
+                    await memory_agent.save_successful_answer(
+                        query=query,
+                        answer=perception.solution_summary,
+                        confidence=perception.confidence,
+                        source=source,
+                        goal_achieved=True,
+                        session_id=blackboard.state.session_id
+                    )
+                    
+                    # Save Session Memory (JSON backup)
                     memory_agent.save_session_memory(blackboard.state.session_id, blackboard.get_snapshot())
                     
                     return perception.solution_summary
