@@ -217,12 +217,25 @@ def extract_pdf(input: FilePathInput) -> MarkdownOutput:
     global_image_dir = ROOT / "documents" / "images"
     global_image_dir.mkdir(parents=True, exist_ok=True)
 
+    # Context manager to suppress stdout
+    from contextlib import contextmanager
+    @contextmanager
+    def suppress_stdout():
+        with open(os.devnull, "w") as devnull:
+            old_stdout = sys.stdout
+            sys.stdout = devnull
+            try:
+                yield
+            finally:
+                sys.stdout = old_stdout
+
     # Actual markdown with relative image paths
-    markdown = pymupdf4llm.to_markdown(
-        input.file_path,
-        write_images=True,
-        image_path=str(global_image_dir)
-    )
+    with suppress_stdout():
+        markdown = pymupdf4llm.to_markdown(
+            input.file_path,
+            write_images=True,
+            image_path=str(global_image_dir)
+        )
 
     # Re-point image links in the markdown
     markdown = re.sub(
