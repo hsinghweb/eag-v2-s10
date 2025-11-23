@@ -31,8 +31,12 @@ class Coordinator:
             executor_agent = ExecutorAgent(blackboard, self.multi_mcp)
             retriever_agent = RetrieverAgent(blackboard, self.multi_mcp)
             memory_agent = MemoryAgent(blackboard)
+            
+            # 3. Initialize Session Memory
+            memory_agent.initialize_session(blackboard.state.session_id)
+            retriever_agent.set_session_memory(memory_agent.session_memory)
 
-            # 3. Initial Perception (Understand the User)
+            # 4. Initial Perception (Understand the User)
             print("\n--- 🧠 Perception (User Query) ---")
             perception = perception_agent.run(query, snapshot_type="user_query")
             print(f"Goal: {perception.result_requirement}")
@@ -49,8 +53,17 @@ class Coordinator:
                 print(f"✅ Goal Achieved immediately: {perception.solution_summary}")
                 self.logger.log_conclusion(perception.solution_summary)
                 
-                # Save to Memory FAISS (if high confidence)
+                # Add to Session Memory (Tier 1)
                 source = blackboard.state.context_data.get("source", "unknown")
+                memory_agent.add_to_session(
+                    query=query,
+                    answer=perception.solution_summary,
+                    confidence=perception.confidence,
+                    source=source,
+                    validated=True
+                )
+                
+                # Save to Conversation Memory FAISS (Tier 2 - if high confidence)
                 await memory_agent.save_successful_answer(
                     query=query,
                     answer=perception.solution_summary,
@@ -60,8 +73,8 @@ class Coordinator:
                     session_id=blackboard.state.session_id
                 )
                 
-                # Save Session Memory (JSON backup)
-                memory_agent.save_session_memory(blackboard.state.session_id, blackboard.get_snapshot())
+                # Finalize session
+                memory_agent.finalize_session()
                 
                 return perception.solution_summary
 
@@ -134,8 +147,17 @@ class Coordinator:
                     print(f"\n✅ Goal Achieved via Perception: {perception.solution_summary}")
                     self.logger.log_conclusion(perception.solution_summary)
                     
-                    # Save to Memory FAISS (if high confidence)
+                    # Add to Session Memory (Tier 1)
                     source = blackboard.state.context_data.get("source", "unknown")
+                    memory_agent.add_to_session(
+                        query=query,
+                        answer=perception.solution_summary,
+                        confidence=perception.confidence,
+                        source=source,
+                        validated=True
+                    )
+                    
+                    # Save to Conversation Memory FAISS (Tier 2 - if high confidence)
                     await memory_agent.save_successful_answer(
                         query=query,
                         answer=perception.solution_summary,
@@ -145,8 +167,8 @@ class Coordinator:
                         session_id=blackboard.state.session_id
                     )
                     
-                    # Save Session Memory (JSON backup)
-                    memory_agent.save_session_memory(blackboard.state.session_id, blackboard.get_snapshot())
+                    # Finalize session
+                    memory_agent.finalize_session()
                     
                     return perception.solution_summary
 

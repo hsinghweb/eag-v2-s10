@@ -5,6 +5,7 @@ import numpy as np
 import json
 import requests
 from pathlib import Path
+from typing import Optional, Dict
 from utils.memory_validator import is_memory_valid
 
 # Configuration
@@ -24,6 +25,30 @@ class RetrieverAgent:
     def __init__(self, blackboard: Blackboard, multi_mcp: MultiMCP):
         self.blackboard = blackboard
         self.multi_mcp = multi_mcp
+        self.session_memory = None  # Will be set by coordinator
+    
+    def set_session_memory(self, session_memory):
+        """Set session memory manager"""
+        self.session_memory = session_memory
+    
+    def search_session_memory(self, query: str) -> Optional[Dict]:
+        """
+        Search current session for similar Q&A.
+        Returns best matching turn if found and validated.
+        """
+        if not self.session_memory:
+            return None
+        
+        match = self.session_memory.search_similar(query, threshold=0.85)
+        
+        if match:
+            print(f"[SESSION] Found similar turn:")
+            print(f"  - Turn ID: {match['turn_id']}")
+            print(f"  - Similarity: {match['similarity']:.3f}")
+            print(f"  - Confidence: {match['confidence']}")
+            print(f"  - Source: {match['source']}")
+        
+        return match
 
     async def search_memory_faiss(self, query: str, top_k: int = 3) -> dict:
         """
@@ -124,15 +149,30 @@ class RetrieverAgent:
 
     async def run(self, query: str):
         """
-        Fetch context with priority: Memory (if valid) → Documents → Web
+        Fetch context with priority: Session → Conversation FAISS → Documents → Web
         """
         print(f"[RETRIEVER] Gathering context for '{query}'...")
         
         context_results = []
         source_type = None
         
-        # 1. Search Memory FAISS (with validation)
-        print("[RETRIEVER] Searching memory FAISS...")
+        # 1. Search Session Memory FIRST (current conversation)
+        print("[RETRIEVER] Searching session memory...")
+        session_match = self.search_session_memory(query)
+        
+        if session_match:
+            context_results.append(f"Session Memory (Turn {session_match['turn_id']}):\n{session_match['answer']}")
+            source_type = "session"
+            print(f"[SESSION] Using answer from turn {session_match['turn_id']}")
+            
+            # Store in blackboard and return early
+            self.blackboard.state.context_data["initial_retrieval"] = "\n".join(context_results)
+            self.blackboard.state.context_data["source"] = source_type
+            print(f"[RETRIEVER] Found 1 context source (session)")
+            return
+        
+        # 2. Search Conversation Memory FAISS (with validation)
+        print("[RETRIEVER] Searching conversation memory FAISS...")
         memory_match = await self.search_memory_faiss(query)
         
         if memory_match:
@@ -150,7 +190,7 @@ class RetrieverAgent:
             print(f"[RETRIEVER] Found 1 context source (memory)")
             return
         
-        # 2. Search Document FAISS
+        # 3. Search Document FAISS
         print("[RETRIEVER] Searching document FAISS...")
         doc_results = await self.search_document_faiss(query, top_k=5)
         
@@ -160,7 +200,7 @@ class RetrieverAgent:
             source_type = "documents"
             print(f"[DOCUMENTS] Retrieved {len(doc_results)} chunks")
         
-        # 3. Store results
+        # 4. Store results
         self.blackboard.state.context_data["initial_retrieval"] = "\n".join(context_results)
         self.blackboard.state.context_data["source"] = source_type or "none"
         print(f"[RETRIEVER] Found {len(context_results)} context sources")

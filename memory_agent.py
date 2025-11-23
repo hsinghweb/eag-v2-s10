@@ -5,7 +5,9 @@ import json
 import requests
 from pathlib import Path
 from datetime import datetime, timezone
+from typing import Optional
 from utils.memory_validator import should_index_to_memory, calculate_ttl_hours
+from utils.session_memory import SessionMemoryManager
 
 # Configuration
 EMBED_URL = "http://localhost:11434/api/embeddings"
@@ -22,6 +24,42 @@ def get_embedding(text: str) -> np.ndarray:
 class MemoryAgent:
     def __init__(self, blackboard: Blackboard):
         self.blackboard = blackboard
+        self.session_memory: Optional[SessionMemoryManager] = None
+    
+    def initialize_session(self, session_id: str):
+        """Initialize session memory for current conversation"""
+        self.session_memory = SessionMemoryManager(session_id)
+        print(f"[SESSION] Initialized session memory: {session_id}")
+    
+    def add_to_session(
+        self,
+        query: str,
+        answer: str,
+        confidence: float,
+        source: str,
+        validated: bool = True
+    ) -> int:
+        """Add turn to session memory"""
+        if not self.session_memory:
+            print(f"[SESSION] Warning: Session memory not initialized")
+            return -1
+        
+        turn_id = self.session_memory.add_turn(
+            query=query,
+            answer=answer,
+            confidence=confidence,
+            source=source,
+            validated=validated
+        )
+        
+        print(f"[SESSION] Added turn {turn_id} (confidence: {confidence}, validated: {validated})")
+        return turn_id
+    
+    def finalize_session(self):
+        """Save session memory to file"""
+        if self.session_memory:
+            self.session_memory.save()
+            print(f"[SESSION] Finalized session with {len(self.session_memory)} turns")
 
     async def index_to_memory_faiss(
         self,
