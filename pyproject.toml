@@ -23,6 +23,7 @@ dependencies = [
     "trafilatura>=1.9.0",
     "pymupdf4llm>=0.0.1",
     "duckduckgo-search>=8.1.1",
+    "tavily-python>=0.7.13",
 ]
 
 [tool.uv]

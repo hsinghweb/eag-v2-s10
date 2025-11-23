@@ -147,6 +147,11 @@ async def run_user_code(code: str, multi_mcp) -> dict:
                 except Exception:
                     error_msg = str(result_value)
 
+                # DEBUG: Print error to stderr
+                import sys
+                sys.stderr.write(f"\n🔴 TOOL ERROR ({len(error_msg)} chars): {error_msg}\n")
+                sys.stderr.flush()
+
                 return {
                     "status": "error",
                     "error": error_msg,

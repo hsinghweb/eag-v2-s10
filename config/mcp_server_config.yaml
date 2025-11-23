@@ -13,7 +13,7 @@ mcp_servers:
     script: mcp_server_3.py
     cwd: D:/Himanshu/EAG-V2/eag-v2-s10/mcp_servers
     description: "Webtools to search internet for queries and fetch content for a specific web page"
-    capabilities: ["duckduckgo_search_results", "download_raw_html_from_url"]
+    capabilities: ["web_search", "download_raw_html_from_url"]
   - id: mixed
     script: mcp_server_4.py
     cwd: D:/Himanshu/EAG-V2/eag-v2-s10/mcp_servers

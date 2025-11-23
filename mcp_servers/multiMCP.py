@@ -89,10 +89,18 @@ class MultiMCP:
             raise ValueError(f"Tool '{tool_name}' not found on any server.")
 
         config = entry["config"]
+        
+        # CRITICAL FIX: Ensure subprocess uses the same Python as main process
+        # sys.executable should be the venv Python when running with 'uv run'
+        python_exe = sys.executable
+        sys.stderr.write(f"DEBUG: Using Python executable: {python_exe}\n")
+        sys.stderr.flush()
+        
         params = StdioServerParameters(
-            command=sys.executable,
+            command=python_exe,  # Use the current Python (venv)
             args=[config["script"]],
-            cwd=config.get("cwd", os.getcwd())
+            cwd=config.get("cwd", os.getcwd()),
+            env=os.environ.copy()  # Pass current environment to subprocess
         )
 
         async with stdio_client(params) as (read, write):
