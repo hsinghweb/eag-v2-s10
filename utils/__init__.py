@@ -11,6 +11,7 @@ from .memory_validator import (
 )
 
 from .session_memory import SessionMemoryManager
+from .retry_utils import generate_with_retry
 
 __all__ = [
     'is_memory_valid',
@@ -18,5 +19,6 @@ __all__ = [
     'calculate_ttl_hours',
     'get_age_hours',
     'FRESHNESS_KEYWORDS',
-    'SessionMemoryManager'
+    'SessionMemoryManager',
+    'generate_with_retry'
 ]
