@@ -143,8 +143,7 @@ class Coordinator:
             print("❌ Max steps reached without conclusion.")
             self.logger.log_conclusion("Max steps reached without conclusion.")
             
-            # Save Session Memory
-            memory_agent.save_session_memory(blackboard.state.session_id, blackboard.get_snapshot())
+            # Do NOT save session memory for failures
             
             return "Max steps reached."
 
@@ -159,8 +158,6 @@ class Coordinator:
             print(f"Conclusion: {conclusion}")
             self.logger.log_conclusion(conclusion)
             
-            # Save Session Memory
-            if 'memory_agent' in locals():
-                memory_agent.save_session_memory(blackboard.state.session_id, blackboard.get_snapshot())
+            # Do NOT save session memory for failures
                 
             return conclusion
