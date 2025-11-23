@@ -48,6 +48,10 @@ class Coordinator:
             if perception.original_goal_achieved:
                 print(f"✅ Goal Achieved immediately: {perception.solution_summary}")
                 self.logger.log_conclusion(perception.solution_summary)
+                
+                # Save Session Memory
+                memory_agent.save_session_memory(blackboard.state.session_id, blackboard.get_snapshot())
+                
                 return perception.solution_summary
 
             # 4. Retrieve Context
@@ -93,6 +97,10 @@ class Coordinator:
                 if step.type == "CONCLUDE":
                     print(f"\n🎉 Final Answer: {step.conclusion}")
                     self.logger.log_conclusion(step.conclusion)
+                    
+                    # Save Session Memory
+                    memory_agent.save_session_memory(blackboard.state.session_id, blackboard.get_snapshot())
+                    
                     return step.conclusion
 
                 # Perception of Result
@@ -114,6 +122,10 @@ class Coordinator:
                 if perception.original_goal_achieved:
                     print(f"\n✅ Goal Achieved via Perception: {perception.solution_summary}")
                     self.logger.log_conclusion(perception.solution_summary)
+                    
+                    # Save Session Memory
+                    memory_agent.save_session_memory(blackboard.state.session_id, blackboard.get_snapshot())
+                    
                     return perception.solution_summary
 
                 # Replan / Next Step
@@ -130,6 +142,10 @@ class Coordinator:
 
             print("❌ Max steps reached without conclusion.")
             self.logger.log_conclusion("Max steps reached without conclusion.")
+            
+            # Save Session Memory
+            memory_agent.save_session_memory(blackboard.state.session_id, blackboard.get_snapshot())
+            
             return "Max steps reached."
 
         except Exception as e:
@@ -142,4 +158,9 @@ class Coordinator:
             
             print(f"Conclusion: {conclusion}")
             self.logger.log_conclusion(conclusion)
+            
+            # Save Session Memory
+            if 'memory_agent' in locals():
+                memory_agent.save_session_memory(blackboard.state.session_id, blackboard.get_snapshot())
+                
             return conclusion

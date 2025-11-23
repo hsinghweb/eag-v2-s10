@@ -310,6 +310,7 @@ def process_documents():
     mcp_log("INFO", "Indexing documents with unified RAG pipeline...")
     ROOT = Path(__file__).parent.resolve()
     DOC_PATH = ROOT / "documents"
+    MEMORY_PATH = ROOT.parent / "memory" # Memory is at project root
     INDEX_CACHE = ROOT / "faiss_index"
     INDEX_CACHE.mkdir(exist_ok=True)
     INDEX_FILE = INDEX_CACHE / "index.bin"
@@ -323,7 +324,12 @@ def process_documents():
     metadata = json.loads(METADATA_FILE.read_text()) if METADATA_FILE.exists() else []
     index = faiss.read_index(str(INDEX_FILE)) if INDEX_FILE.exists() else None
 
-    for file in DOC_PATH.glob("*.*"):
+    # Collect all files from documents and memory
+    all_files = list(DOC_PATH.glob("*.*"))
+    if MEMORY_PATH.exists():
+        all_files.extend(list(MEMORY_PATH.glob("*.json")))
+
+    for file in all_files:
         fhash = file_hash(file)
         if file.name in CACHE_META and CACHE_META[file.name] == fhash:
             mcp_log("SKIP", f"Skipping unchanged file: {file.name}")
@@ -341,6 +347,16 @@ def process_documents():
             elif ext in [".html", ".htm", ".url"]:
                 mcp_log("INFO", f"Using Trafilatura to extract {file.name}")
                 markdown = extract_webpage(UrlInput(url=file.read_text().strip())).markdown
+
+            elif ext == ".json":
+                mcp_log("INFO", f"Flattening JSON memory file {file.name}")
+                try:
+                    data = json.loads(file.read_text(encoding="utf-8"))
+                    # Flatten JSON to string
+                    markdown = json.dumps(data, indent=2, ensure_ascii=False)
+                except Exception as e:
+                    mcp_log("WARN", f"Failed to parse JSON {file.name}: {e}")
+                    markdown = ""
 
             else:
                 # Fallback to MarkItDown for other formats
