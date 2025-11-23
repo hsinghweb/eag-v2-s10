@@ -15,13 +15,7 @@ from models import SearchInput, UrlInput
 from models import PythonCodeOutput  # Import the models we need
 
 
-@dataclass
-class SearchResult:
-    title: str
-    link: str
-    snippet: str
-    position: int
-
+from duckduckgo_search import DDGS
 
 class RateLimiter:
     def __init__(self, requests_per_minute: int = 30):
@@ -42,110 +36,6 @@ class RateLimiter:
                 await asyncio.sleep(wait_time)
 
         self.requests.append(now)
-
-
-class DuckDuckGoSearcher:
-    BASE_URL = "https://html.duckduckgo.com/html"
-    HEADERS = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-    }
-
-    def __init__(self):
-        self.rate_limiter = RateLimiter()
-
-    def format_results_for_llm(self, results: List[SearchResult]) -> str:
-        """Format results in a natural language style that's easier for LLMs to process"""
-        if not results:
-            return "No results were found for your search query. This could be due to DuckDuckGo's bot detection or the query returned no matches. Please try rephrasing your search or try again in a few minutes."
-
-        output = []
-        output.append(f"Found {len(results)} search results:\n")
-
-        for result in results:
-            output.append(f"{result.position}. {result.title}")
-            output.append(f"   URL: {result.link}")
-            output.append(f"   Summary: {result.snippet}")
-            output.append("")  # Empty line between results
-
-        return "\n".join(output)
-
-    async def search(
-        self, query: str, ctx: Context, max_results: int = 10
-    ) -> List[SearchResult]:
-        try:
-            # Apply rate limiting
-            await self.rate_limiter.acquire()
-
-            # Create form data for POST request
-            data = {
-                "q": query,
-                "b": "",
-                "kl": "",
-            }
-
-            await ctx.info(f"Searching DuckDuckGo for: {query}")
-
-            async with httpx.AsyncClient() as client:
-                result = await client.post(
-                    self.BASE_URL, data=data, headers=self.HEADERS, timeout=30.0
-                )
-                result.raise_for_status()
-
-            # Parse HTML result
-            soup = BeautifulSoup(result.text, "html.parser")
-            if not soup:
-                await ctx.error("Failed to parse HTML result")
-                return []
-
-            results = []
-            for result in soup.select(".result"):
-                title_elem = result.select_one(".result__title")
-                if not title_elem:
-                    continue
-
-                link_elem = title_elem.find("a")
-                if not link_elem:
-                    continue
-
-                title = link_elem.get_text(strip=True)
-                link = link_elem.get("href", "")
-
-                # Skip ad results
-                if "y.js" in link:
-                    continue
-
-                # Clean up DuckDuckGo redirect URLs
-                if link.startswith("//duckduckgo.com/l/?uddg="):
-                    link = urllib.parse.unquote(link.split("uddg=")[1].split("&")[0])
-
-                snippet_elem = result.select_one(".result__snippet")
-                snippet = snippet_elem.get_text(strip=True) if snippet_elem else ""
-
-                results.append(
-                    SearchResult(
-                        title=title,
-                        link=link,
-                        snippet=snippet,
-                        position=len(results) + 1,
-                    )
-                )
-
-                if len(results) >= max_results:
-                    break
-
-            await ctx.info(f"Successfully found {len(results)} results")
-            return results
-
-        except httpx.TimeoutException:
-            await ctx.error("Search request timed out")
-            return []
-        except httpx.HTTPError as e:
-            await ctx.error(f"HTTP error occurred: {str(e)}")
-            return []
-        except Exception as e:
-            await ctx.error(f"Unexpected error during search: {str(e)}")
-            traceback.print_exc(file=sys.stderr)
-            return []
 
 
 class WebContentFetcher:
@@ -208,6 +98,45 @@ class WebContentFetcher:
             return f"Error: An unexpected error occurred while fetching the webpage ({str(e)})"
 
 
+class DuckDuckGoSearcher:
+    def format_results_for_llm(self, results: List[Dict[str, Any]]) -> str:
+        """Format results in a natural language style that's easier for LLMs to process"""
+        if not results:
+            return "No results were found for your search query."
+
+        output = []
+        output.append(f"Found {len(results)} search results:\n")
+
+        for i, result in enumerate(results, 1):
+            output.append(f"{i}. {result.get('title', 'No Title')}")
+            output.append(f"   URL: {result.get('href', 'No URL')}")
+            output.append(f"   Summary: {result.get('body', 'No Summary')}")
+            output.append("")  # Empty line between results
+
+        return "\n".join(output)
+
+    async def search(
+        self, query: str, ctx: Context, max_results: int = 10
+    ) -> List[Dict[str, Any]]:
+        try:
+            await ctx.info(f"Searching DuckDuckGo for: {query}")
+            sys.stderr.write(f"DEBUG: Searching for '{query}' with max_results={max_results}\n")
+            
+            # Use DDGS context manager for better resource handling
+            with DDGS() as ddgs:
+                # ddgs.text() returns an iterator, convert to list
+                results = list(ddgs.text(query, max_results=max_results))
+            
+            sys.stderr.write(f"DEBUG: Found {len(results)} results\n")
+            await ctx.info(f"Successfully found {len(results)} results")
+            return results
+
+        except Exception as e:
+            sys.stderr.write(f"DEBUG: Error in search: {e}\n")
+            await ctx.error(f"Unexpected error during search: {str(e)}")
+            traceback.print_exc(file=sys.stderr)
+            return []
+
 # Initialize FastMCP server
 mcp = FastMCP("ddg-search")
 searcher = DuckDuckGoSearcher()
@@ -215,20 +144,20 @@ fetcher = WebContentFetcher()
 
 
 @mcp.tool()
-async def duckduckgo_search_results(input: SearchInput, ctx: Context) -> PythonCodeOutput:
+async def duckduckgo_search_results(query: str, ctx: Context, max_results: int = 10) -> str:
     """Search DuckDuckGo. """
     try:
-        results = await searcher.search(input.query, ctx, input.max_results)
-        return PythonCodeOutput(result=searcher.format_results_for_llm(results))
+        results = await searcher.search(query, ctx, max_results)
+        return searcher.format_results_for_llm(results)
     except Exception as e:
         traceback.print_exc(file=sys.stderr)
         return f"An error occurred while searching: {str(e)}"
 
 
 @mcp.tool()
-async def download_raw_html_from_url(input: UrlInput, ctx: Context) -> PythonCodeOutput:
+async def download_raw_html_from_url(url: str, ctx: Context) -> str:
     """Fetch webpage content. """
-    return PythonCodeOutput(result=await fetcher.fetch_and_parse(input.url, ctx))
+    return await fetcher.fetch_and_parse(url, ctx)
 
 
 if __name__ == "__main__":
