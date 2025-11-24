@@ -38,31 +38,31 @@ mcp = FastMCP("Mixed 4")
 @mcp.tool()
 def add(input: AddInput) -> AddOutput:
     """Add two numbers. """
-    print("CALLED: add(AddInput) -> AddOutput")
+    sys.stderr.write("CALLED: add(AddInput) -> AddOutput\n")
     return AddOutput(result=input.a + input.b)
 
 @mcp.tool()
 def subtract(input: SubtractInput) -> SubtractOutput:
     """Subtract one number from another."""
-    print("CALLED: subtract(SubtractInput) -> SubtractOutput")
+    sys.stderr.write("CALLED: subtract(SubtractInput) -> SubtractOutput\n")
     return SubtractOutput(result=input.a - input.b)
 
 @mcp.tool()
 def multiply(a, b):
     """Multiply two integers."""
-    print("CALLED: multiply(a, b) -> result")
+    sys.stderr.write("CALLED: multiply(a, b) -> result\n")
     return a * b
 
 @mcp.tool()
 def no_input():
     """Doesn't take any input."""
-    print("CALLED: multiply(a, b) -> result")
+    sys.stderr.write("CALLED: no_input() -> result\n")
     return "hello"
 
 @mcp.tool()
 def int_list_to_exponential_sum(input: ExpSumInput) -> ExpSumOutput:
     """Sum exponentials of int list. """
-    print("CALLED: int_list_to_exponential_sum(ExpSumInput) -> ExpSumOutput")
+    sys.stderr.write("CALLED: int_list_to_exponential_sum(ExpSumInput) -> ExpSumOutput\n")
     result = sum(math.exp(i) for i in input.numbers)  # ✅ FIXED
     return ExpSumOutput(result=result)
 
@@ -70,16 +70,16 @@ def int_list_to_exponential_sum(input: ExpSumInput) -> ExpSumOutput:
 @mcp.tool()
 def strings_to_chars_to_int(input: StringsToIntsInput) -> StringsToIntsOutput:
     """Convert characters to ASCII values. """
-    print("CALLED: strings_to_chars_to_int(StringsToIntsInput) -> StringsToIntsOutput")
+    sys.stderr.write("CALLED: strings_to_chars_to_int(StringsToIntsInput) -> StringsToIntsOutput\n")
     ascii_values = [ord(char) for char in input.string]
     return StringsToIntsOutput(ascii_values=ascii_values)
 
 # ------------------- Main -------------------
 
 if __name__ == "__main__":
-    print("mcp_server_4.py starting")
+    sys.stderr.write("mcp_server_4.py starting\n")
     if len(sys.argv) > 1 and sys.argv[1] == "dev":
         mcp.run()  # Run without transport for dev server
     else:
         mcp.run(transport="stdio")  # Run with stdio for direct execution
-        print("\nShutting down...")
+        sys.stderr.write("\nShutting down...\n")

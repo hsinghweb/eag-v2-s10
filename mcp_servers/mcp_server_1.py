@@ -46,79 +46,79 @@ mcp = FastMCP("Calculator")
 @mcp.tool()
 def add(input: AddInput) -> AddOutput:
     """Add two numbers. """
-    print("CALLED: add(AddInput) -> AddOutput")
+    sys.stderr.write("CALLED: add(AddInput) -> AddOutput\n")
     return AddOutput(result=input.a + input.b)
 
 @mcp.tool()
 def subtract(input: SubtractInput) -> SubtractOutput:
     """Subtract one number from another. """
-    print("CALLED: subtract(SubtractInput) -> SubtractOutput")
+    sys.stderr.write("CALLED: subtract(SubtractInput) -> SubtractOutput\n")
     return SubtractOutput(result=input.a - input.b)
 
 @mcp.tool()
 def multiply(input: MultiplyInput) -> MultiplyOutput:
     """Multiply two integers. """
-    print("CALLED: multiply(MultiplyInput) -> MultiplyOutput")
+    sys.stderr.write("CALLED: multiply(MultiplyInput) -> MultiplyOutput\n")
     return MultiplyOutput(result=input.a * input.b)
 
 @mcp.tool()
 def divide(input: DivideInput) -> DivideOutput:
     """Divide one number by another. """
-    print("CALLED: divide(DivideInput) -> DivideOutput")
+    sys.stderr.write("CALLED: divide(DivideInput) -> DivideOutput\n")
     return DivideOutput(result=input.a / input.b)
 
 @mcp.tool()
 def power(input: PowerInput) -> PowerOutput:
     """Compute a raised to the power of b. """
-    print("CALLED: power(PowerInput) -> PowerOutput")
+    sys.stderr.write("CALLED: power(PowerInput) -> PowerOutput\n")
     return PowerOutput(result=input.a ** input.b)
 
 @mcp.tool()
 def cbrt(input: CbrtInput) -> CbrtOutput:
     """Compute the cube root of a number. """
-    print("CALLED: cbrt(CbrtInput) -> CbrtOutput")
+    sys.stderr.write("CALLED: cbrt(CbrtInput) -> CbrtOutput\n")
     return CbrtOutput(result=input.a ** (1/3))
 
 @mcp.tool()
 def factorial(input: FactorialInput) -> FactorialOutput:
     """Compute the factorial of a number. """
-    print("CALLED: factorial(FactorialInput) -> FactorialOutput")
+    sys.stderr.write("CALLED: factorial(FactorialInput) -> FactorialOutput\n")
     return FactorialOutput(result=math.factorial(input.a))
 
 @mcp.tool()
 def remainder(input: RemainderInput) -> RemainderOutput:
     """Compute the remainder of a divided by b. """
-    print("CALLED: remainder(RemainderInput) -> RemainderOutput")
+    sys.stderr.write("CALLED: remainder(RemainderInput) -> RemainderOutput\n")
     return RemainderOutput(result=input.a % input.b)
 
 @mcp.tool()
 def sin(input: SinInput) -> SinOutput:
     """Compute sine of an angle in radians. """
-    print("CALLED: sin(SinInput) -> SinOutput")
+    sys.stderr.write("CALLED: sin(SinInput) -> SinOutput\n")
     return SinOutput(result=math.sin(input.a))
 
 @mcp.tool()
 def cos(input: CosInput) -> CosOutput:
     """Compute cosine of an angle in radians. """
-    print("CALLED: cos(CosInput) -> CosOutput")
+    sys.stderr.write("CALLED: cos(CosInput) -> CosOutput\n")
     return CosOutput(result=math.cos(input.a))
 
 @mcp.tool()
 def tan(input: TanInput) -> TanOutput:
     """Compute tangent of an angle in radians. """
-    print("CALLED: tan(TanInput) -> TanOutput")
+    sys.stderr.write("CALLED: tan(TanInput) -> TanOutput\n")
     return TanOutput(result=math.tan(input.a))
 
 @mcp.tool()
 def mine(input: MineInput) -> MineOutput:
     """Special mining tool. """
-    print("CALLED: mine(MineInput) -> MineOutput")
+    sys.stderr.write("CALLED: mine(MineInput) -> MineOutput\n")
     return MineOutput(result=input.a - input.b - input.b)
 
 @mcp.tool()
 def create_thumbnail(input: CreateThumbnailInput) -> ImageOutput:
     """Create a 100x100 thumbnail from image. """
-    print("CALLED: create_thumbnail(CreateThumbnailInput) -> ImageOutput")
+    sys.stderr.write("CALLED: create_thumbnail(CreateThumbnailInput) -> ImageOutput\n")
     img = PILImage.open(input.image_path)
     img.thumbnail((100, 100))
     return ImageOutput(data=img.tobytes(), format="png")
@@ -126,7 +126,7 @@ def create_thumbnail(input: CreateThumbnailInput) -> ImageOutput:
 @mcp.tool()
 def strings_to_chars_to_int(input: StringsToIntsInput) -> StringsToIntsOutput:
     """Convert characters to ASCII values. """
-    print("CALLED: strings_to_chars_to_int(StringsToIntsInput) -> StringsToIntsOutput")
+    sys.stderr.write("CALLED: strings_to_chars_to_int(StringsToIntsInput) -> StringsToIntsOutput\n")
     ascii_values = [ord(char) for char in input.string]
     return StringsToIntsOutput(ascii_values=ascii_values)
 
@@ -135,14 +135,14 @@ def strings_to_chars_to_int(input: StringsToIntsInput) -> StringsToIntsOutput:
 @mcp.tool()
 def int_list_to_exponential_sum(input: ExpSumInput) -> ExpSumOutput:
     """Sum exponentials of int list. """
-    print("CALLED: int_list_to_exponential_sum(ExpSumInput) -> ExpSumOutput")
+    sys.stderr.write("CALLED: int_list_to_exponential_sum(ExpSumInput) -> ExpSumOutput\n")
     result = sum(math.exp(i) for i in input.numbers)
     return ExpSumOutput(result=result)
 
 @mcp.tool()
 def fibonacci_numbers(input: FibonacciInput) -> FibonacciOutput:
     """Generate first n Fibonacci numbers. """
-    print("CALLED: fibonacci_numbers(FibonacciInput) -> FibonacciOutput")
+    sys.stderr.write("CALLED: fibonacci_numbers(FibonacciInput) -> FibonacciOutput\n")
     n = input.n
     if n <= 0:
         return FibonacciOutput(result=[])
@@ -212,7 +212,7 @@ def fibonacci_numbers(input: FibonacciInput) -> FibonacciOutput:
 @mcp.resource("greeting://{name}")
 def get_greeting(name: str) -> str:
     """Get a personalized greeting. """
-    print("CALLED: get_greeting(name: str) -> str")
+    sys.stderr.write("CALLED: get_greeting(name: str) -> str\n")
     return f"Hello, {name}!"
 
 # ------------------- Prompts -------------------
