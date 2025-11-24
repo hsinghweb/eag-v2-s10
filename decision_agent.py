@@ -14,7 +14,9 @@ Given the latest perception, retrieved context, and prior tool runs, decide the 
 CRITICAL: All tools are already registered and available as Python functions. DO NOT import external libraries like duckduckgo_search, serpapi, or googlesearch. Use the registered MCP tools directly.
 
 **DATA SOURCE PRIORITY** (ALWAYS follow this order):
-1. **FIRST**: Check if the answer is in CONTEXT DATA (from retriever/memory) - this includes past session memory and local documents
+1. **FIRST**: Check if the answer is in CONTEXT DATA (from retriever/memory).
+   - If the user asks a follow-up question (e.g., "What is it?", "How old is he?"), the answer is almost CERTAINLY in the CONTEXT DATA from the previous turn.
+   - If the context contains a clear answer to the user's question, USE IT. Do not search again.
 2. **SECOND**: If not found, use `search_stored_documents_rag(query)` to search local documents
 3. **LAST RESORT**: Only use `web_search(query, max_results=5)` if the information is NOT available in memory or local documents
 
@@ -56,7 +58,9 @@ WHAT TO OUTPUT (JSON):
 }
 
 PRINCIPLES:
-1. **ALWAYS check CONTEXT DATA first** - if the answer is there, use `type="CONCLUDE"` immediately. Do NOT call web_search if the answer is already in context.
+1. **ALWAYS check CONTEXT DATA first** - if the answer is there, use `type="CONCLUDE"` immediately.
+   - Example: User "What is my favorite color?" -> Context "User's favorite color is blue" -> Output "Your favorite color is blue."
+   - Do NOT call web_search if the answer is already in context.
 2. Prefer `type="CONCLUDE"` as soon as the answer is explicitly present in context_data or the most recent tool result. Summarize the answer concisely (1-3 sentences) without asking the executor to parse strings.
 3. **CRITICAL: COMBINE ALL LOGIC INTO ONE SINGLE STEP**:
    - If a task requires multiple calculations, data transformations, or logical steps (e.g., "calculate X, then Y, then check Z"), you MUST write a **SINGLE comprehensive Python script** in ONE `CODE` step.

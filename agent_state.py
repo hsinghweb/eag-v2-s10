@@ -82,8 +82,11 @@ class GlobalAgentState(BaseModel):
 # --- Blackboard Interface ---
 
 class Blackboard:
-    def __init__(self, query: str):
-        self.state = GlobalAgentState(original_query=query)
+    def __init__(self, query: str, session_id: Optional[str] = None):
+        if session_id:
+            self.state = GlobalAgentState(original_query=query, session_id=session_id)
+        else:
+            self.state = GlobalAgentState(original_query=query)
 
     def update_perception(self, snapshot: PerceptionSnapshot):
         self.state.latest_perception = snapshot

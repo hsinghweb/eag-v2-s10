@@ -12,6 +12,7 @@ class Coordinator:
     def __init__(self, multi_mcp: MultiMCP):
         self.multi_mcp = multi_mcp
         self.logger = ConversationLogger()
+        self.current_session_id = None
         # Blackboard is initialized per session/query in run()
 
     async def run(self, query: str):
@@ -22,8 +23,11 @@ class Coordinator:
         self.logger.log_user_query(query)
         
         try:
-            # 1. Initialize Blackboard
-            blackboard = Blackboard(query)
+            # 1. Initialize Blackboard (reuse session ID if available)
+            blackboard = Blackboard(query, session_id=self.current_session_id)
+            
+            # Store the session ID for future turns
+            self.current_session_id = blackboard.state.session_id
             
             # 2. Initialize Agents
             perception_agent = PerceptionAgent(blackboard)

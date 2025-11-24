@@ -79,6 +79,11 @@ class RetrieverAgent:
             for idx, distance in zip(indices[0], distances[0]):
                 if idx >= len(metadata):
                     continue
+                
+                # Filter out bad matches (distance > 300 implies poor similarity)
+                if distance > 300.0:
+                    print(f"[MEMORY_SEARCH] Rejected: Distance too high ({distance:.4f})")
+                    continue
                     
                 memory_entry = metadata[idx]
                 

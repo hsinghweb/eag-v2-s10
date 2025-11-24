@@ -33,6 +33,18 @@ async def main():
     # 3. Initialize Coordinator
     coordinator = Coordinator(multi_mcp)
     
+    # Try to load previous session ID
+    session_file = ".last_session_id"
+    if os.path.exists(session_file):
+        try:
+            with open(session_file, "r") as f:
+                last_session_id = f.read().strip()
+                if last_session_id:
+                    coordinator.current_session_id = last_session_id
+                    print(f"🔄 Resumed session: {last_session_id}")
+        except Exception as e:
+            print(f"⚠️ Failed to load last session: {e}")
+    
     # 4. Interactive Loop
     print("\n✅ System Ready. Type 'exit' to quit.\n")
     
@@ -46,6 +58,11 @@ async def main():
                 break
                 
             await coordinator.run(query)
+            
+            # Save session ID after every turn
+            if coordinator.current_session_id:
+                with open(session_file, "w") as f:
+                    f.write(coordinator.current_session_id)
             
         except KeyboardInterrupt:
             print("\n👋 Goodbye!")
