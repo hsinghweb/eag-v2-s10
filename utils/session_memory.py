@@ -68,7 +68,7 @@ class SessionMemoryManager:
     def search_similar(
         self,
         query: str,
-        threshold: float = 0.85
+        threshold: float = 0.50  # Lowered from 0.85 to allow more flexible matching
     ) -> Optional[Dict]:
         """
         Find most similar validated turn in current session.
@@ -81,21 +81,16 @@ class SessionMemoryManager:
         Returns:
             dict: Best matching turn with similarity score, or None
         """
-        print(f"[SESSION_SEARCH] Searching {len(self.conversation)} turns for: '{query}'")
         best_match = None
         best_similarity = 0.0
         
         for turn in self.conversation:
-            print(f"[SESSION_SEARCH] Checking turn {turn.get('turn_id')}: validated={turn.get('validated')}, confidence={turn.get('confidence')}")
-            
             # Only consider validated turns
             if not turn.get("validated", False):
-                print(f"[SESSION_SEARCH] Skipping turn {turn.get('turn_id')}: not validated")
                 continue
             
             # Only consider high-confidence turns
             if turn.get("confidence", 0.0) < 0.9:
-                print(f"[SESSION_SEARCH] Skipping turn {turn.get('turn_id')}: low confidence")
                 continue
             
             # Calculate semantic similarity against BOTH query and answer
@@ -109,8 +104,6 @@ class SessionMemoryManager:
                 turn["answer"]
             )
             
-            print(f"[SESSION_SEARCH] Turn {turn.get('turn_id')}: query_sim={query_similarity:.3f}, answer_sim={answer_similarity:.3f}")
-            
             # Use the higher of the two similarities
             max_similarity = max(query_similarity, answer_similarity)
             
@@ -118,12 +111,6 @@ class SessionMemoryManager:
                 best_similarity = max_similarity
                 best_match = turn.copy()
                 best_match["similarity"] = max_similarity
-                print(f"[SESSION_SEARCH] New best match: turn {turn.get('turn_id')} with similarity {max_similarity:.3f}")
-        
-        if best_match:
-            print(f"[SESSION_SEARCH] Final match: turn {best_match.get('turn_id')} with similarity {best_match.get('similarity'):.3f}")
-        else:
-            print(f"[SESSION_SEARCH] No match found (threshold={threshold})")
         
         return best_match
     

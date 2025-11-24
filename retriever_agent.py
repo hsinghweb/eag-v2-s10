@@ -39,7 +39,7 @@ class RetrieverAgent:
         if not self.session_memory:
             return None
         
-        match = self.session_memory.search_similar(query, threshold=0.85)
+        match = self.session_memory.search_similar(query, threshold=0.50)
         
         if match:
             print(f"[SESSION] Found similar turn:")
