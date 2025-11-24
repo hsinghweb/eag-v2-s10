@@ -28,8 +28,10 @@ class MemoryAgent:
     
     def initialize_session(self, session_id: str):
         """Initialize session memory for current conversation"""
-        self.session_memory = SessionMemoryManager(session_id)
-        print(f"[SESSION] Initialized session memory: {session_id}")
+        # Try to load existing session first
+        self.session_memory = SessionMemoryManager.load(session_id)
+        if self.session_memory is not None:
+            print(f"[SESSION] Initialized session memory: {session_id} (Turns: {len(self.session_memory)})")
     
     def add_to_session(
         self,
@@ -40,7 +42,7 @@ class MemoryAgent:
         validated: bool = True
     ) -> int:
         """Add turn to session memory"""
-        if not self.session_memory:
+        if self.session_memory is None:
             print(f"[SESSION] Warning: Session memory not initialized")
             return -1
         
@@ -57,7 +59,7 @@ class MemoryAgent:
     
     def finalize_session(self):
         """Save session memory to file"""
-        if self.session_memory:
+        if self.session_memory is not None:
             self.session_memory.save()
             print(f"[SESSION] Finalized session with {len(self.session_memory)} turns")
 
@@ -154,7 +156,7 @@ class MemoryAgent:
         else:
             print(f"[MEMORY] Skipped indexing (confidence: {confidence}, source: {source})")
 
-    def save_session_memory(self, session_id: str, session_data: dict):
+    def save_debug_snapshot(self, session_id: str, session_data: dict):
         """
         Save session data to JSON file for backup/debugging.
         This is separate from FAISS indexing and used for session history.
@@ -164,10 +166,10 @@ class MemoryAgent:
         memory_dir = Path("memory")
         memory_dir.mkdir(exist_ok=True)
         
-        file_path = memory_dir / f"session_{session_id}.json"
+        file_path = memory_dir / f"debug_session_{session_id}.json"
         try:
             with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(session_data, f, indent=2, ensure_ascii=False)
-            print(f"[SESSION] Session memory saved to {file_path}")
+            print(f"[SESSION] Debug snapshot saved to {file_path}")
         except Exception as e:
-            print(f"[SESSION] Failed to save session memory: {e}")
+            print(f"[SESSION] Failed to save debug snapshot: {e}")

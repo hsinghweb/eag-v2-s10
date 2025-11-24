@@ -126,8 +126,21 @@ class Coordinator:
                     print(f"\n🎉 Final Answer: {step.conclusion}")
                     self.logger.log_conclusion(step.conclusion)
                     
-                    # Save Session Memory
-                    memory_agent.save_session_memory(blackboard.state.session_id, blackboard.get_snapshot())
+                    # Add to Session Memory (Tier 1)
+                    source = blackboard.state.context_data.get("source", "unknown")
+                    memory_agent.add_to_session(
+                        query=query,
+                        answer=step.conclusion,
+                        confidence=1.0, # Assumed high confidence for explicit conclusion
+                        source=source,
+                        validated=True
+                    )
+                    
+                    # Finalize session (Save SessionMemoryManager)
+                    memory_agent.finalize_session()
+                    
+                    # Save Debug Snapshot (Blackboard state)
+                    memory_agent.save_debug_snapshot(blackboard.state.session_id, blackboard.get_snapshot())
                     
                     return step.conclusion
 
