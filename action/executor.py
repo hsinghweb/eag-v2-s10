@@ -83,6 +83,53 @@ def build_safe_globals(mcp_funcs: dict, multi_mcp=None) -> dict:
 
         safe_globals["parallel"] = parallel
 
+        # Mark inner call so we don't wrap it again
+        if isinstance(node.value, ast.Call):
+            setattr(node.value, "_skip_auto_await", True)
+        node.value = self.visit(node.value)
+        return node
+
+    def visit_Call(self, node):
+        self.generic_visit(node)
+        if getattr(node, "_skip_auto_await", False):
+            return node
+        if isinstance(node.func, ast.Name) and node.func.id in self.async_funcs:
+            return ast.Await(value=node)
+        return node
+
+# ───────────────────────────────────────────────────────────────
+# UTILITY FUNCTIONS
+# ───────────────────────────────────────────────────────────────
+def count_function_calls(code: str) -> int:
+    tree = ast.parse(code)
+    return sum(isinstance(node, ast.Call) for node in ast.walk(tree))
+
+def build_safe_globals(mcp_funcs: dict, multi_mcp=None) -> dict:
+    safe_globals = {
+        "__builtins__": {
+            k: getattr(builtins, k)
+            for k in ("range", "len", "int", "float", "str", "list", "dict", "print", "sum", "__import__")
+        },
+        **mcp_funcs,
+    }
+
+    for module in ALLOWED_MODULES:
+        safe_globals[module] = __import__(module)
+
+    # Store LLM-style result
+    safe_globals["final_answer"] = lambda x: safe_globals.setdefault("result_holder", x)
+
+    # Optional: add parallel execution
+    if multi_mcp:
+        async def parallel(*tool_calls):
+            coros = [
+                multi_mcp.function_wrapper(tool_name, *args)
+                for tool_name, *args in tool_calls
+            ]
+            return await asyncio.gather(*coros)
+
+        safe_globals["parallel"] = parallel
+
     return safe_globals
 
 
@@ -92,6 +139,16 @@ def build_safe_globals(mcp_funcs: dict, multi_mcp=None) -> dict:
 async def run_user_code(code: str, multi_mcp) -> dict:
     start_time = time.perf_counter()
     start_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # 1. Validate Syntax
+    syntax_error = validate_code(code)
+    if syntax_error:
+        return {
+            "status": "error",
+            "error": syntax_error,
+            "execution_time": start_timestamp,
+            "total_time": "0.0"
+        }
 
     try:
         func_count = count_function_calls(code)
@@ -228,24 +285,46 @@ async def run_user_code(code: str, multi_mcp) -> dict:
 # ───────────────────────────────────────────────────────────────
 # TOOL WRAPPER
 # ───────────────────────────────────────────────────────────────
+def validate_code(code: str) -> str:
+    """Validate Python code syntax. Returns error message or None."""
+    try:
+        ast.parse(code)
+        return None
+    except SyntaxError as e:
+        return f"SyntaxError: {e.msg} at line {e.lineno}"
+
 def make_tool_proxy(tool_name: str, mcp):
     async def _tool_fn(*args):
-        result = await mcp.function_wrapper(tool_name, *args)
+        # Retry logic for tool calls (simple retry for transient errors)
+        max_retries = 3
+        last_error = None
         
-        # Unwrap CallToolResult
-        if hasattr(result, "content") and result.content:
-            text_content = result.content[0].text
-            
-            # Try to parse JSON
-            import json
+        for attempt in range(max_retries):
             try:
-                data = json.loads(text_content)
-                # If it's a dict with a single 'result' key, return that value
-                if isinstance(data, dict) and "result" in data and len(data) == 1:
-                    return data["result"]
-                return data
-            except json.JSONDecodeError:
-                return text_content
+                result = await mcp.function_wrapper(tool_name, *args)
+                
+                # Unwrap CallToolResult
+                if hasattr(result, "content") and result.content:
+                    text_content = result.content[0].text
+                    
+                    # Try to parse JSON
+                    import json
+                    try:
+                        data = json.loads(text_content)
+                        # If it's a dict with a 'result' key, return that value
+                        # This handles cases where extra fields might be present
+                        if isinstance(data, dict) and "result" in data:
+                            return data["result"]
+                        return data
+                    except json.JSONDecodeError:
+                        return text_content
+                
+                return result
+            except Exception as e:
+                last_error = e
+                # Wait briefly before retry
+                await asyncio.sleep(0.5 * (attempt + 1))
         
-        return result
+        raise last_error
+
     return _tool_fn
