@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 
 # Configuration
-ROOT = Path(__file__).parent / "mcp_servers" / "faiss_index"
+ROOT = Path(__file__).parent / "mcp_servers" / "faiss_index" / "memory"
 INDEX_FILE = ROOT / "index.bin"
 METADATA_FILE = ROOT / "metadata.json"
 EMBEDDING_DIM = 768  # nomic-embed-text dimension

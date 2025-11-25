@@ -154,13 +154,40 @@ class RetrieverAgent:
 
     async def run(self, query: str):
         """
-        Fetch context with priority: Session → Conversation FAISS → Documents → Web
+        Fetch context with priority:
+        - If query explicitly mentions documents/files → Search Documents FIRST
+        - Otherwise: Session → Conversation FAISS → Documents → Web
         """
         print(f"[RETRIEVER] Gathering context for '{query}'...")
         
         context_results = []
         source_type = None
         
+        # Detect if user is explicitly asking about local documents
+        query_lower = query.lower()
+        document_keywords = ['document', 'pdf', 'file', 'local', 'stored', 'camelia', 'camellia']
+        is_document_query = any(keyword in query_lower for keyword in document_keywords)
+        
+        if is_document_query:
+            print("[RETRIEVER] Detected document-specific query - prioritizing local documents")
+            
+            # Search Document FAISS FIRST for document queries
+            print("[RETRIEVER] Searching document FAISS...")
+            doc_results = await self.search_document_faiss(query, top_k=5)
+            
+            if doc_results:
+                doc_text = "\n\n".join(doc_results)
+                context_results.append(f"Local Documents:\n{doc_text}")
+                source_type = "documents"
+                print(f"[DOCUMENTS] Retrieved {len(doc_results)} chunks")
+                
+                # Store results and return early
+                self.blackboard.state.context_data["initial_retrieval"] = "\n".join(context_results)
+                self.blackboard.state.context_data["source"] = source_type
+                print(f"[RETRIEVER] Found {len(context_results)} context sources (documents)")
+                return
+        
+        # Standard priority: Session → Memory → Documents
         # 1. Search Session Memory FIRST (current conversation)
         print("[RETRIEVER] Searching session memory...")
         session_match = self.search_session_memory(query)
