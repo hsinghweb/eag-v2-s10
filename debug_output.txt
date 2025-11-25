@@ -1,0 +1,33 @@
+﻿================================================================================
+TESTING ITERATIVE TOOL CALLS
+================================================================================
+in MultiMCP initialize
+[ERROR] Error initializing MCP server mcp_server_1.py: 'charmap' codec can't encode character '\u2192' in position 0: character maps to <undefined>
+[ERROR] Error initializing MCP server mcp_server_2.py: 'charmap' codec can't encode character '\u2192' in position 0: character maps to <undefined>
+[ERROR] Error initializing MCP server mcp_server_3.py: 'charmap' codec can't encode character '\u2192' in position 0: character maps to <undefined>
+[ERROR] Error initializing MCP server mcp_server_4.py: 'charmap' codec can't encode character '\u2192' in position 0: character maps to <undefined>
+
+================================================================================
+TEST 1: Simple Fibonacci (Should Work)
+================================================================================
+
+Status: error
+Result: NameError: name 'fibonacci_numbers' is not defined
+
+================================================================================
+TEST 2: Simple Factorial (Should Work)
+================================================================================
+
+Status: error
+Result: NameError: name 'factorial' is not defined
+
+================================================================================
+TEST 3: Iterative Calls (Currently Broken)
+================================================================================
+
+Status: error
+Result: NameError: name 'fibonacci_numbers' is not defined
+
+================================================================================
+TESTS COMPLETE
+================================================================================

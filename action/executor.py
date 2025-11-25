@@ -53,49 +53,6 @@ class AwaitTransformer(ast.NodeTransformer):
 # ───────────────────────────────────────────────────────────────
 # UTILITY FUNCTIONS
 # ───────────────────────────────────────────────────────────────
-def count_function_calls(code: str) -> int:
-    tree = ast.parse(code)
-    return sum(isinstance(node, ast.Call) for node in ast.walk(tree))
-
-def build_safe_globals(mcp_funcs: dict, multi_mcp=None) -> dict:
-    safe_globals = {
-        "__builtins__": {
-            k: getattr(builtins, k)
-            for k in ("range", "len", "int", "float", "str", "list", "dict", "print", "sum", "__import__")
-        },
-        **mcp_funcs,
-    }
-
-    for module in ALLOWED_MODULES:
-        safe_globals[module] = __import__(module)
-
-    # Store LLM-style result
-    safe_globals["final_answer"] = lambda x: safe_globals.setdefault("result_holder", x)
-
-    # Optional: add parallel execution
-    if multi_mcp:
-        async def parallel(*tool_calls):
-            coros = [
-                multi_mcp.function_wrapper(tool_name, *args)
-                for tool_name, *args in tool_calls
-            ]
-            return await asyncio.gather(*coros)
-
-        safe_globals["parallel"] = parallel
-
-        # Mark inner call so we don't wrap it again
-        if isinstance(node.value, ast.Call):
-            setattr(node.value, "_skip_auto_await", True)
-        node.value = self.visit(node.value)
-        return node
-
-    def visit_Call(self, node):
-        self.generic_visit(node)
-        if getattr(node, "_skip_auto_await", False):
-            return node
-        if isinstance(node.func, ast.Name) and node.func.id in self.async_funcs:
-            return ast.Await(value=node)
-        return node
 
 # ───────────────────────────────────────────────────────────────
 # UTILITY FUNCTIONS
@@ -108,7 +65,7 @@ def build_safe_globals(mcp_funcs: dict, multi_mcp=None) -> dict:
     safe_globals = {
         "__builtins__": {
             k: getattr(builtins, k)
-            for k in ("range", "len", "int", "float", "str", "list", "dict", "print", "sum", "__import__")
+            for k in ("range", "len", "int", "float", "str", "list", "dict", "print", "sum", "type", "__import__")
         },
         **mcp_funcs,
     }
@@ -295,13 +252,33 @@ def validate_code(code: str) -> str:
 
 def make_tool_proxy(tool_name: str, mcp):
     async def _tool_fn(*args):
+        # DEBUG: Log what's being passed to the tool
+        print(f"[MCP] Calling tool '{tool_name}' with args: {args}")
+        print(f"[MCP] Arg types: {[type(arg).__name__ for arg in args]}")
+        print(f"[MCP] Arg values: {[repr(arg) for arg in args]}")
+        
+        # CRITICAL FIX: Check if any args are string representations that shouldn't be
+        # This happens when variables in loops aren't properly evaluated
+        processed_args = []
+        for arg in args:
+            # If arg is a string that looks like a variable name or 'result', 
+            # it means the variable wasn't evaluated - this is a bug
+            if isinstance(arg, str) and arg in ('result', 'num', 'fib_nums', 'fibonacci_sequence'):
+                print(f"[MCP] WARNING: Received variable name '{arg}' as string instead of value!")
+                print(f"[MCP] This indicates the variable was not evaluated before passing to tool")
+                # We can't fix this here - the value is already lost
+                # The fix needs to be earlier in the execution chain
+                processed_args.append(arg)
+            else:
+                processed_args.append(arg)
+        
         # Retry logic for tool calls (simple retry for transient errors)
         max_retries = 3
         last_error = None
         
         for attempt in range(max_retries):
             try:
-                result = await mcp.function_wrapper(tool_name, *args)
+                result = await mcp.function_wrapper(tool_name, *processed_args)
                 
                 # Unwrap CallToolResult
                 if hasattr(result, "content") and result.content:
@@ -314,14 +291,20 @@ def make_tool_proxy(tool_name: str, mcp):
                         # If it's a dict with a 'result' key, return that value
                         # This handles cases where extra fields might be present
                         if isinstance(data, dict) and "result" in data:
-                            return data["result"]
+                            extracted_result = data["result"]
+                            print(f"[MCP] Tool '{tool_name}' returned (extracted): {extracted_result}")
+                            return extracted_result
+                        print(f"[MCP] Tool '{tool_name}' returned (parsed JSON): {data}")
                         return data
                     except json.JSONDecodeError:
+                        print(f"[MCP] Tool '{tool_name}' returned (raw text): {text_content[:100]}...")
                         return text_content
                 
+                print(f"[MCP] Tool '{tool_name}' returned (direct): {result}")
                 return result
             except Exception as e:
                 last_error = e
+                print(f"[MCP] Tool '{tool_name}' attempt {attempt + 1} failed: {e}")
                 # Wait briefly before retry
                 await asyncio.sleep(0.5 * (attempt + 1))
         
