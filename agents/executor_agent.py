@@ -3,7 +3,7 @@ from typing import Any, Dict
 from agent_state import PlanStep, Blackboard
 from action.executor import run_user_code # Reuse the safe executor logic
 from mcp_servers.multiMCP import MultiMCP
-from response_agent import ResponseAgent
+from .response_agent import ResponseAgent
 
 class ExecutorAgent:
     def __init__(self, blackboard: Blackboard, multi_mcp: MultiMCP):

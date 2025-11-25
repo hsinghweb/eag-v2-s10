@@ -1,10 +1,10 @@
 import asyncio
 from agent_state import Blackboard
-from perception_agent import PerceptionAgent
-from decision_agent import DecisionAgent
-from executor_agent import ExecutorAgent
-from retriever_agent import RetrieverAgent
-from memory_agent import MemoryAgent
+from agents.perception_agent import PerceptionAgent
+from agents.decision_agent import DecisionAgent
+from agents.executor_agent import ExecutorAgent
+from agents.retriever_agent import RetrieverAgent
+from agents.memory_agent import MemoryAgent
 from mcp_servers.multiMCP import MultiMCP
 from conversation_logger import ConversationLogger
 
