@@ -111,6 +111,9 @@ class DecisionAgent:
         --- HISTORY ---
         {history}
 
+        --- USER FEEDBACK (HITL) ---
+        {json.dumps(state.user_feedback, indent=2) if state.user_feedback else "None"}
+
         --- MODE ---
         {mode}
         """

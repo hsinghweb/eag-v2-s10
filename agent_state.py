@@ -48,9 +48,12 @@ class GlobalAgentState(BaseModel):
     
     # Current Context
     latest_perception: Optional[PerceptionSnapshot] = None
+    latest_perception: Optional[PerceptionSnapshot] = None
     context_data: Dict[str, Any] = Field(default_factory=dict) # From Retriever
     
-    @property
+    # HITL State
+    hitl_config: Dict[str, bool] = Field(default_factory=lambda: {"require_plan_approval": True, "require_step_approval": False})
+    user_feedback: List[str] = Field(default_factory=list) # History of user feedback during planning
     def user_query(self) -> str:
         """Alias for original_query for backward compatibility"""
         return self.original_query

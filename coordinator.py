@@ -15,6 +15,11 @@ class Coordinator:
         self.current_session_id = None
         # Blackboard is initialized per session/query in run()
 
+    async def get_user_feedback(self, prompt: str) -> str:
+        """Async wrapper for user input to avoid blocking"""
+        print(f"\n🛑 HITL: {prompt}")
+        return await asyncio.to_thread(input, "👉 Your input (Enter to approve, or type feedback): ")
+
     async def run(self, query: str):
         print(f"\n🚀 Starting Coordinator for query: {query}")
         print(f"📝 Conversation log: {self.logger.get_log_path()}")
@@ -95,10 +100,27 @@ class Coordinator:
             num_sources = len(blackboard.state.context_data.get("initial_retrieval", "").split("\n"))
             self.logger.log_retriever(query, num_sources)
 
-            # 5. Initial Planning
+            # 5. Initial Planning & HITL Review
             print("\n--- 📝 Decision (Initial Plan) ---")
             step = decision_agent.run(mode="initial")
             
+            # HITL: Plan Approval Loop
+            if blackboard.state.hitl_config["require_plan_approval"]:
+                while True:
+                    print(f"\n📋 Proposed Plan Step {step.step_index}: {step.description}")
+                    if step.code:
+                        print(f"   Code:\n{step.code}")
+                    
+                    feedback = await self.get_user_feedback("Approve this plan? (Press Enter to Approve, or type feedback to Replan)")
+                    
+                    if not feedback.strip():
+                        print("✅ Plan Approved.")
+                        break
+                    else:
+                        print(f"🔄 Feedback received: '{feedback}'. Replanning...")
+                        blackboard.state.user_feedback.append(feedback)
+                        step = decision_agent.run(mode="replan")
+
             # Log decision
             self.logger.log_decision("initial", [], {
                 "step_index": step.step_index,
@@ -115,8 +137,27 @@ class Coordinator:
                 step_count += 1
                 print(f"\n--- ⚙️ Step {step.step_index} Execution ---")
                 
-                # Execute
-                step = await executor_agent.run(step)
+                # HITL: Step Approval (if enabled)
+                if blackboard.state.hitl_config["require_step_approval"]:
+                    print(f"\n🛑 HITL: About to execute Step {step.step_index}: {step.description}")
+                    if step.code:
+                        print(f"   Code:\n{step.code}")
+                    
+                    feedback = await self.get_user_feedback("Approve execution? (Enter to Approve, 'skip' to Skip, 'stop' to Abort)")
+                    
+                    if feedback.lower().strip() == "stop":
+                        print("🛑 Execution Aborted by User.")
+                        return "Execution Aborted by User."
+                    elif feedback.lower().strip() == "skip":
+                        print("⏭️ Step Skipped by User.")
+                        step.status = "skipped"
+                        step.execution_result = "Skipped by user"
+                    else:
+                        # Execute
+                        step = await executor_agent.run(step)
+                else:
+                    # Execute normally
+                    step = await executor_agent.run(step)
                 
                 # Log execution
                 self.logger.log_executor(
