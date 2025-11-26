@@ -40,10 +40,10 @@ class WebSocketIOHandler(IOHandler):
         except Exception as e:
             print(f"Error sending to websocket: {e}")
 
-    async def input(self, prompt: str) -> str:
+    async def input(self, prompt: str, data: Any = None) -> str:
         """Wait for user input (HITL) via WebSocket"""
         # Send request for input
-        await self.output("hitl_request", {"prompt": prompt})
+        await self.output("hitl_request", {"prompt": prompt, "context": data})
         
         # Create a future to wait for the response
         self.input_future = asyncio.get_running_loop().create_future()

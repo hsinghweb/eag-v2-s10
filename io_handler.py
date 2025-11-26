@@ -15,10 +15,11 @@ class IOHandler(ABC):
         pass
 
     @abstractmethod
-    async def input(self, prompt: str) -> str:
+    async def input(self, prompt: str, data: Any = None) -> str:
         """
         Request input from the user (HITL).
         prompt: The question to ask the user
+        data: Optional context (e.g., the plan step being reviewed)
         Returns: User's response string
         """
         pass
@@ -57,6 +58,9 @@ class CLIIOHandler(IOHandler):
         elif message_type == "decision":
             print(f"\n--- 📝 Decision ({data['mode']}) ---")
 
-    async def input(self, prompt: str) -> str:
+    async def input(self, prompt: str, data: Any = None) -> str:
         print(f"\n🛑 HITL: {prompt}")
+        if data:
+            # For CLI, we might have already printed the plan, but let's be safe
+            pass 
         return await asyncio.to_thread(input, "👉 Your input (Enter to approve, or type feedback): ")

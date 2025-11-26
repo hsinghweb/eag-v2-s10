@@ -1,4 +1,5 @@
 import asyncio
+from typing import Any
 from agent_state import Blackboard
 from agents.perception_agent import PerceptionAgent
 from agents.decision_agent import DecisionAgent
@@ -17,9 +18,9 @@ class Coordinator:
         self.io_handler = io_handler if io_handler else CLIIOHandler()
         # Blackboard is initialized per session/query in run()
 
-    async def get_user_feedback(self, prompt: str) -> str:
+    async def get_user_feedback(self, prompt: str, data: Any = None) -> str:
         """Async wrapper for user input via IOHandler"""
-        return await self.io_handler.input(prompt)
+        return await self.io_handler.input(prompt, data)
 
     async def run(self, query: str, hitl_config: dict = None):
         await self.io_handler.output("log", f"\n🚀 Starting Coordinator for query: {query}")
@@ -128,7 +129,10 @@ class Coordinator:
                         "code": step.code
                     })
                     
-                    feedback = await self.get_user_feedback("Approve this plan? (Press Enter to Approve, or type feedback to Replan)")
+                    feedback = await self.get_user_feedback(
+                        "Approve this plan? (Press Enter to Approve, or type feedback to Replan)",
+                        data={"step_index": step.step_index, "description": step.description, "code": step.code}
+                    )
                     
                     if not feedback.strip():
                         await self.io_handler.output("log", "✅ Plan Approved.")
@@ -159,7 +163,10 @@ class Coordinator:
                     if step.code:
                         await self.io_handler.output("log", f"   Code:\n{step.code}")
                     
-                    feedback = await self.get_user_feedback("Approve execution? (Enter to Approve, 'skip' to Skip, 'stop' to Abort)")
+                    feedback = await self.get_user_feedback(
+                        "Approve execution? (Enter to Approve, 'skip' to Skip, 'stop' to Abort)",
+                        data={"step_index": step.step_index, "description": step.description, "code": step.code}
+                    )
                     
                     if feedback.lower().strip() == "stop":
                         await self.io_handler.output("log", "🛑 Execution Aborted by User.")
