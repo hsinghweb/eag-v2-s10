@@ -30,6 +30,10 @@ async def main():
     multi_mcp = MultiMCP(server_configs=server_configs)
     await multi_mcp.initialize()
     
+    # 2.5. Auto-initialize FAISS indices if they don't exist
+    from memory_utils.auto_init_indices import initialize_all_indices
+    initialize_all_indices()
+    
     # 3. Initialize Coordinator
     coordinator = Coordinator(multi_mcp)
     

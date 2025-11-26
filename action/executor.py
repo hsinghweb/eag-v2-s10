@@ -251,11 +251,12 @@ def validate_code(code: str) -> str:
         return f"SyntaxError: {e.msg} at line {e.lineno}"
 
 def make_tool_proxy(tool_name: str, mcp):
+    print(f"[EXECUTOR] Creating proxy for tool: {tool_name}")
     async def _tool_fn(*args):
         # DEBUG: Log what's being passed to the tool
-        print(f"[MCP] Calling tool '{tool_name}' with args: {args}")
-        print(f"[MCP] Arg types: {[type(arg).__name__ for arg in args]}")
-        print(f"[MCP] Arg values: {[repr(arg) for arg in args]}")
+        print(f"[EXECUTOR-PROXY] Tool '{tool_name}' called with args: {args}")
+        print(f"[EXECUTOR-PROXY] Arg types: {[type(arg).__name__ for arg in args]}")
+        print(f"[EXECUTOR-PROXY] Arg values: {[repr(arg) for arg in args]}")
         
         # CRITICAL FIX: Check if any args are string representations that shouldn't be
         # This happens when variables in loops aren't properly evaluated
@@ -293,6 +294,8 @@ def make_tool_proxy(tool_name: str, mcp):
                         if isinstance(data, dict) and "result" in data:
                             extracted_result = data["result"]
                             print(f"[MCP] Tool '{tool_name}' returned (extracted): {extracted_result}")
+                            print(f"[MCP] Extracted result type: {type(extracted_result).__name__}")
+                            print(f"[MCP] Extracted result repr: {repr(extracted_result)}")
                             return extracted_result
                         print(f"[MCP] Tool '{tool_name}' returned (parsed JSON): {data}")
                         return data

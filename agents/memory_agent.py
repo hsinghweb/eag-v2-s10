@@ -12,7 +12,7 @@ from memory_utils.session_memory import SessionMemoryManager
 # Configuration
 EMBED_URL = "http://localhost:11434/api/embeddings"
 EMBED_MODEL = "nomic-embed-text"
-ROOT = Path(__file__).parent / "mcp_servers"
+ROOT = Path(__file__).parent.parent / "mcp_servers"  # Fixed: parent.parent to get project root
 MEMORY_INDEX_PATH = ROOT / "faiss_index" / "memory"
 
 def get_embedding(text: str) -> np.ndarray:

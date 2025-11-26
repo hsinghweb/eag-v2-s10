@@ -11,7 +11,7 @@ from memory_utils.memory_validator import is_memory_valid
 # Configuration
 EMBED_URL = "http://localhost:11434/api/embeddings"
 EMBED_MODEL = "nomic-embed-text"
-ROOT = Path(__file__).parent / "mcp_servers"
+ROOT = Path(__file__).parent.parent / "mcp_servers"  # Fixed: parent.parent to get project root
 DOCUMENTS_INDEX_PATH = ROOT / "faiss_index" / "documents"
 MEMORY_INDEX_PATH = ROOT / "faiss_index" / "memory"
 

@@ -152,8 +152,8 @@ def calculate_ttl_hours(source: str) -> int:
     source_lower = source.lower()
     
     if "web_search" in source_lower or "web" in source_lower:
-        return 24  # Web results expire in 1 day
+        return 6  # Web results expire in 6 hours (reduced from 24h)
     elif "documents" in source_lower or "rag" in source_lower or "local" in source_lower:
-        return 720  # Document-based: 30 days
+        return 168  # Document-based: 7 days (reduced from 30 days)
     else:
-        return 168  # Default: 7 days
+        return 24  # Default: 1 day (reduced from 7 days)

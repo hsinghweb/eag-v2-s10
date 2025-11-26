@@ -68,7 +68,7 @@ class SessionMemoryManager:
     def search_similar(
         self,
         query: str,
-        threshold: float = 0.50  # Lowered from 0.85 to allow more flexible matching
+        threshold: float = 0.75  # Increased from 0.50 to be more strict
     ) -> Optional[Dict]:
         """
         Find most similar validated turn in current session.
