@@ -293,17 +293,21 @@ def make_tool_proxy(tool_name: str, mcp):
                         # This handles cases where extra fields might be present
                         if isinstance(data, dict) and "result" in data:
                             extracted_result = data["result"]
-                            print(f"[MCP] Tool '{tool_name}' returned (extracted): {extracted_result}")
-                            print(f"[MCP] Extracted result type: {type(extracted_result).__name__}")
-                            print(f"[MCP] Extracted result repr: {repr(extracted_result)}")
+                            print(f"[EXECUTOR-PROXY] Tool '{tool_name}' returned (extracted): {extracted_result}")
+                            print(f"[EXECUTOR-PROXY] Extracted result type: {type(extracted_result).__name__}")
+                            print(f"[EXECUTOR-PROXY] Extracted result repr: {repr(extracted_result)}")
+                            print(f"[EXECUTOR-PROXY] >>> RETURNING TO PYTHON CODE: {repr(extracted_result)}")
                             return extracted_result
-                        print(f"[MCP] Tool '{tool_name}' returned (parsed JSON): {data}")
+                        print(f"[EXECUTOR-PROXY] Tool '{tool_name}' returned (parsed JSON): {data}")
+                        print(f"[EXECUTOR-PROXY] >>> RETURNING TO PYTHON CODE: {repr(data)}")
                         return data
                     except json.JSONDecodeError:
-                        print(f"[MCP] Tool '{tool_name}' returned (raw text): {text_content[:100]}...")
+                        print(f"[EXECUTOR-PROXY] Tool '{tool_name}' returned (raw text): {text_content[:100]}...")
+                        print(f"[EXECUTOR-PROXY] >>> RETURNING TO PYTHON CODE: {repr(text_content)}")
                         return text_content
                 
-                print(f"[MCP] Tool '{tool_name}' returned (direct): {result}")
+                print(f"[EXECUTOR-PROXY] Tool '{tool_name}' returned (direct): {result}")
+                print(f"[EXECUTOR-PROXY] >>> RETURNING TO PYTHON CODE: {repr(result)}")
                 return result
             except Exception as e:
                 last_error = e
