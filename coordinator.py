@@ -20,7 +20,7 @@ class Coordinator:
         print(f"\n🛑 HITL: {prompt}")
         return await asyncio.to_thread(input, "👉 Your input (Enter to approve, or type feedback): ")
 
-    async def run(self, query: str):
+    async def run(self, query: str, hitl_config: dict = None):
         print(f"\n🚀 Starting Coordinator for query: {query}")
         print(f"📝 Conversation log: {self.logger.get_log_path()}")
         
@@ -30,6 +30,11 @@ class Coordinator:
         try:
             # 1. Initialize Blackboard (reuse session ID if available)
             blackboard = Blackboard(query, session_id=self.current_session_id)
+            
+            # Apply HITL Config if provided
+            if hitl_config:
+                blackboard.state.hitl_config.update(hitl_config)
+                print(f"⚙️ HITL Configuration updated: {blackboard.state.hitl_config}")
             
             # Store the session ID for future turns
             self.current_session_id = blackboard.state.session_id

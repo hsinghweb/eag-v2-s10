@@ -52,16 +52,41 @@ async def main():
     # 4. Interactive Loop
     print("\n✅ System Ready. Type 'exit' to quit.\n")
     
+    # HITL Configuration (Default)
+    hitl_config = {"require_plan_approval": True, "require_step_approval": False}
+    
     while True:
         try:
             query = input("🟢 You: ").strip()
             if not query:
                 continue
+                
+            # HITL Control Commands
+            if query.lower() == "/hitl on":
+                hitl_config["require_plan_approval"] = True
+                print("⚙️ HITL Plan Approval ENABLED")
+                continue
+            elif query.lower() == "/hitl off":
+                hitl_config["require_plan_approval"] = False
+                print("⚙️ HITL Plan Approval DISABLED")
+                continue
+            elif query.lower() == "/step on":
+                hitl_config["require_step_approval"] = True
+                print("⚙️ HITL Step Approval ENABLED")
+                continue
+            elif query.lower() == "/step off":
+                hitl_config["require_step_approval"] = False
+                print("⚙️ HITL Step Approval DISABLED")
+                continue
+            elif query.lower() == "/hitl status":
+                print(f"⚙️ Current HITL Config: {hitl_config}")
+                continue
+                
             if query.lower() in {"exit", "quit"}:
                 print("👋 Goodbye!")
                 break
                 
-            await coordinator.run(query)
+            await coordinator.run(query, hitl_config=hitl_config)
             
             # Save session ID after every turn
             if coordinator.current_session_id:
