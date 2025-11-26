@@ -45,6 +45,11 @@ class Coordinator:
             perception = perception_agent.run(query, snapshot_type="user_query")
             print(f"Goal: {perception.result_requirement}")
             
+            # Pass ground truth requirement to blackboard for Retriever
+            if perception.require_ground_truth:
+                blackboard.state.context_data["require_ground_truth"] = True
+                print("⚠️ Perception: Ground truth required - Prioritizing local documents")
+            
             # Log perception
             self.logger.log_perception("user_query", {
                 "entities": perception.entities,

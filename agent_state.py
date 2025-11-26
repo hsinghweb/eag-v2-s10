@@ -16,6 +16,7 @@ class PerceptionSnapshot(BaseModel):
     local_reasoning: str = ""
     confidence: float = 0.0
     solution_summary: str = ""
+    require_ground_truth: bool = False  # New field for document prioritization
     timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
 
 class ToolCode(BaseModel):
