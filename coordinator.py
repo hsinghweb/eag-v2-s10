@@ -68,12 +68,22 @@ class Coordinator:
                 "confidence": perception.confidence
             })
             
+            # Helper to format source
+            def get_source_display(source_type):
+                if source_type == "session": return "Tier 1 (Session Memory)"
+                if source_type == "memory": return "Tier 2 (Conversation Memory)"
+                if source_type == "documents": return "Tier 3 (Local Documents)"
+                if source_type == "web": return "Web Search"
+                return "Reasoning/Tool"
+
             if perception.original_goal_achieved:
+                source = blackboard.state.context_data.get("source", "unknown")
+                source_display = get_source_display(source)
                 print(f"✅ Goal Achieved immediately: {perception.solution_summary}")
+                print(f"📚 Source: {source_display}")
                 self.logger.log_conclusion(perception.solution_summary)
                 
                 # Add to Session Memory (Tier 1)
-                source = blackboard.state.context_data.get("source", "unknown")
                 memory_agent.add_to_session(
                     query=query,
                     answer=perception.solution_summary,
@@ -174,11 +184,13 @@ class Coordinator:
                 
                 # Check for Conclusion
                 if step.type == "CONCLUDE":
+                    source = blackboard.state.context_data.get("source", "Reasoning/Tool")
+                    source_display = get_source_display(source)
                     print(f"\n🎉 Final Answer: {step.conclusion}")
+                    print(f"📚 Source: {source_display}")
                     self.logger.log_conclusion(step.conclusion)
                     
                     # Add to Session Memory (Tier 1)
-                    source = blackboard.state.context_data.get("source", "unknown")
                     memory_agent.add_to_session(
                         query=query,
                         answer=step.conclusion,
@@ -212,11 +224,13 @@ class Coordinator:
                 })
                 
                 if perception.original_goal_achieved:
+                    source = blackboard.state.context_data.get("source", "Reasoning/Tool")
+                    source_display = get_source_display(source)
                     print(f"\n✅ Goal Achieved via Perception: {perception.solution_summary}")
+                    print(f"📚 Source: {source_display}")
                     self.logger.log_conclusion(perception.solution_summary)
                     
                     # Add to Session Memory (Tier 1)
-                    source = blackboard.state.context_data.get("source", "unknown")
                     memory_agent.add_to_session(
                         query=query,
                         answer=perception.solution_summary,
