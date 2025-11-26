@@ -113,10 +113,22 @@ def should_index_to_memory(
         print(f"[MEMORY_INDEXER] Skip: Answer too short ({len(answer)} chars)")
         return False
     
-    # Check for error indicators
-    error_indicators = ["error", "failed", "not found", "could not", "unable to"]
-    if any(indicator in answer.lower() for indicator in error_indicators):
+    # ENHANCED: Check for error indicators (more comprehensive)
+    error_indicators = [
+        "error", "failed", "not found", "could not", "unable to",
+        "exception", "traceback", "attempt", "resulted in an error",
+        "calculation failed", "tool error", "execution failed",
+        "invalid", "incorrect", "cannot", "unsuccessful"
+    ]
+    answer_lower = answer.lower()
+    if any(indicator in answer_lower for indicator in error_indicators):
         print(f"[MEMORY_INDEXER] Skip: Answer contains error indicators")
+        return False
+    
+    # ENHANCED: Check for incomplete results
+    incomplete_indicators = ["none", "null", "n/a", "not available", "unknown"]
+    if any(indicator in answer_lower for indicator in incomplete_indicators):
+        print(f"[MEMORY_INDEXER] Skip: Answer appears incomplete")
         return False
     
     # Prefer document-sourced answers

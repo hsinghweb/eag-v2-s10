@@ -93,6 +93,16 @@ class SessionMemoryManager:
             if turn.get("confidence", 0.0) < 0.9:
                 continue
             
+            # ENHANCED: Skip turns with failed/error results
+            answer = turn.get("answer", "")
+            error_indicators = [
+                "error", "failed", "could not", "unable to",
+                "exception", "traceback", "attempt", "resulted in an error",
+                "calculation failed", "tool error", "execution failed"
+            ]
+            if any(indicator in answer.lower() for indicator in error_indicators):
+                continue
+            
             # Calculate semantic similarity against BOTH query and answer
             query_similarity = self._calculate_similarity(
                 query,

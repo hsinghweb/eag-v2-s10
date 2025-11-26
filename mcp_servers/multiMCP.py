@@ -134,7 +134,18 @@ class MultiMCP:
                             # Attempt to parse JSON payloads automatically so agent code can treat
                             # tool responses as native dict/list structures.
                             try:
-                                return json.loads(text_result)
+                                parsed_json = json.loads(text_result)
+                                
+                                # CRITICAL FIX: Extract the actual result value
+                                # If it's a dict with 'result' key, return the value, not the dict
+                                # This prevents iteration issues where Python iterates over dict keys
+                                if isinstance(parsed_json, dict) and "result" in parsed_json:
+                                    actual_result = parsed_json["result"]
+                                    sys.stderr.write(f"[MCP] Extracted 'result' value: {actual_result}\\n")
+                                    sys.stderr.flush()
+                                    return actual_result
+                                
+                                return parsed_json
                             except json.JSONDecodeError:
                                 return text_result
                         else:
