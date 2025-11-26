@@ -6,7 +6,7 @@ import json
 import requests
 from pathlib import Path
 from typing import Optional, Dict
-from utils.memory_validator import is_memory_valid
+from memory_utils.memory_validator import is_memory_valid
 
 # Configuration
 EMBED_URL = "http://localhost:11434/api/embeddings"

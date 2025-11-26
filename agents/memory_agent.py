@@ -6,8 +6,8 @@ import requests
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Optional
-from utils.memory_validator import should_index_to_memory, calculate_ttl_hours
-from utils.session_memory import SessionMemoryManager
+from memory_utils.memory_validator import should_index_to_memory, calculate_ttl_hours
+from memory_utils.session_memory import SessionMemoryManager
 
 # Configuration
 EMBED_URL = "http://localhost:11434/api/embeddings"
