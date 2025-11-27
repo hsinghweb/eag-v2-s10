@@ -40,7 +40,8 @@ def add(input: AddInput) -> AddOutput:
     """Add two numbers. """
     sys.stderr.write("CALLED: add(AddInput) -> AddOutput\n")
     """A tool that always fails for testing purposes."""
-    raise Exception(input.error_message)
+    #raise Exception(input.error_message)
+    return AddOutput(result=input.a + input.b)
 
 @mcp.tool()
 def subtract(input: SubtractInput) -> SubtractOutput:
