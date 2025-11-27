@@ -1,0 +1,52 @@
+
+    <html>
+    <head>
+        <title>Test Simulation Report - Details</title>
+        <style>
+            body { font-family: sans-serif; margin: 20px; }
+            table { border-collapse: collapse; width: 100%; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
+            th { background-color: #f2f2f2; }
+            tr:nth-child(even) { background-color: #f9f9f9; }
+            .plan { white-space: pre-wrap; font-family: monospace; font-size: 0.9em; }
+            .result { white-space: pre-wrap; }
+        </style>
+    </head>
+    <body>
+        <h1>Test Simulation Report - Details</h1>
+        <p>Generated: 2025-11-27 21:36:31</p>
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Category</th>
+                <th>Query</th>
+                <th>Plan</th>
+                <th>Result</th>
+                <th>Status</th>
+                <th>Time (s)</th>
+            </tr>
+    
+            <tr>
+                <td>1</td>
+                <td>Math</td>
+                <td>What is 15 plus 27?</td>
+                <td class="plan">Step 1: Output the answer which is available in context. [None]<br></td>
+                <td class="result">The sum of 15 and 27 is 42. (Source: memory)</td>
+                <td>success</td>
+                <td>7.24</td>
+            </tr>
+        
+            <tr>
+                <td>2</td>
+                <td>Math</td>
+                <td>Calculate 125 multiplied by 8.</td>
+                <td class="plan">Step 1: Output the answer which is available in context. [None]<br>Step 1: Multiply 125 and 8 to get the result. [None]<br></td>
+                <td class="result">The product of 125 and 8 is 1000.</td>
+                <td>success</td>
+                <td>20.05</td>
+            </tr>
+        
+        </table>
+    </body>
+    </html>
+    

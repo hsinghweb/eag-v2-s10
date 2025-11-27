@@ -1,0 +1,49 @@
+[
+  {
+    "id": 1,
+    "category": "Math",
+    "query": "What is 15 plus 27?",
+    "plan": [
+      {
+        "step_index": 1,
+        "description": "Output the answer which is available in context.",
+        "type": "CONCLUDE",
+        "code": ""
+      }
+    ],
+    "result": "The sum of 15 and 27 is 42. (Source: memory)",
+    "status": "success",
+    "duration": 7.240616083145142,
+    "tool_usage": [],
+    "timestamp": "2025-11-27 21:36:01"
+  },
+  {
+    "id": 2,
+    "category": "Math",
+    "query": "Calculate 125 multiplied by 8.",
+    "plan": [
+      {
+        "step_index": 1,
+        "description": "Output the answer which is available in context.",
+        "type": "CONCLUDE",
+        "code": ""
+      },
+      {
+        "step_index": 1,
+        "description": "Multiply 125 and 8 to get the result.",
+        "type": "CODE",
+        "code": "print(multiply(125, 8))"
+      }
+    ],
+    "result": "The product of 125 and 8 is 1000.",
+    "status": "success",
+    "duration": 20.049880266189575,
+    "tool_usage": [
+      [
+        "multiply",
+        "failure"
+      ]
+    ],
+    "timestamp": "2025-11-27 21:36:26"
+  }
+]
