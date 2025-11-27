@@ -43,6 +43,8 @@ class ExecutorAgent:
                 step.status = "completed"
             else:
                 step.status = "failed"
+                # Explicitly tag the result for the Decision Agent
+                step.execution_result = f"TOOL_FAILURE: {llm_interpreted_result}"
                 # Log failure to blackboard memory
                 self.blackboard.state.log_failure(step.description, llm_interpreted_result)
 
