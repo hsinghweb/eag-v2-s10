@@ -26,7 +26,7 @@ class ToolCode(BaseModel):
 class PlanStep(BaseModel):
     step_index: int
     description: str
-    type: Literal["CODE", "CONCLUDE", "NOP"]
+    type: Literal["CODE", "CONCLUDE", "NOP", "ASK_USER"]
     code: Optional[str] = None # Raw code string
     conclusion: Optional[str] = None
     status: Literal["pending", "completed", "failed", "skipped"] = "pending"

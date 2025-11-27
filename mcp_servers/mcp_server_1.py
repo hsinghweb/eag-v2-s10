@@ -37,11 +37,18 @@ from models import (
     FibonacciInput, FibonacciOutput,
     PythonCodeInput, PythonCodeOutput,
     ShellCommandInput,
+    FailInput, FailOutput
 )
 
 mcp = FastMCP("Calculator")
 
 # ------------------- Tools -------------------
+
+@mcp.tool()
+def fail_tool(input: FailInput) -> FailOutput:
+    """A tool that always fails for testing purposes."""
+    sys.stderr.write("CALLED: fail_tool(FailInput) -> FailOutput\n")
+    raise Exception(input.error_message)
 
 @mcp.tool()
 def add(input: AddInput) -> AddOutput:

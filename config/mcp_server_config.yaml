@@ -3,7 +3,7 @@ mcp_servers:
     script: mcp_server_1.py
     cwd: D:/Himanshu/EAG-V2/eag-v2-s10/mcp_servers
     description: "Most used Math tools, including special string-int conversions, fibonacci, python sandbox, shell and sql related tools"
-    capabilities: ["add", "subtract", "multiply", "divide", "power", "cbrt", "factorial", "remainder", "sin", "cos", "tan", "mine", "create_thumbnail", "strings_to_chars_to_int", "int_list_to_exponential_sum", "fibonacci_numbers"]
+    capabilities: ["add", "subtract", "multiply", "divide", "power", "cbrt", "factorial", "remainder", "sin", "cos", "tan", "mine", "create_thumbnail", "strings_to_chars_to_int", "int_list_to_exponential_sum", "fibonacci_numbers", "fail_tool"]
   - id: documents
     script: mcp_server_2.py
     cwd: D:/Himanshu/EAG-V2/eag-v2-s10/mcp_servers

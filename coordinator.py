@@ -224,6 +224,23 @@ class Coordinator:
                     
                     return step.conclusion
 
+                # Check for Dynamic HITL (ASK_USER)
+                if step.type == "ASK_USER":
+                    await self.io_handler.output("log", f"\n❓ Agent Requesting Help: {step.description}")
+                    
+                    feedback = await self.get_user_feedback(
+                        f"Agent Request: {step.description}",
+                        data={"step_index": step.step_index, "description": step.description}
+                    )
+                    
+                    await self.io_handler.output("log", f"🗣️ User Feedback: {feedback}")
+                    blackboard.state.user_feedback.append(feedback)
+                    
+                    # Force Replan immediately
+                    await self.io_handler.output("decision", {"mode": "Replan (User Feedback)"})
+                    step = decision_agent.run(mode="replan")
+                    continue
+
                 # Perception of Result
                 await self.io_handler.output("perception", {"type": "Step Result"})
                 perception = perception_agent.run(

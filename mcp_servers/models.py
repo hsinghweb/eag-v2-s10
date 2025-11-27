@@ -130,6 +130,12 @@ class PythonCodeOutput(BaseModel):
 class ShellCommandInput(BaseModel):
     command: str
 
+class FailInput(BaseModel):
+    error_message: str
+
+class FailOutput(BaseModel):
+    result: str
+
 # --- RAG and Extraction Tools ---
 
 class UrlInput(BaseModel):
