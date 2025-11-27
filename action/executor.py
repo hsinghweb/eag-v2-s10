@@ -282,6 +282,15 @@ def make_tool_proxy(tool_name: str, mcp):
                 result = await mcp.function_wrapper(tool_name, *processed_args)
                 
                 # Unwrap CallToolResult
+                if hasattr(result, "isError") and getattr(result, "isError", False):
+                     # Extract error message
+                    error_msg = "Unknown Error"
+                    if hasattr(result, "content") and result.content:
+                        error_msg = result.content[0].text
+                    
+                    print(f"[EXECUTOR-PROXY] Tool '{tool_name}' returned ERROR: {error_msg}")
+                    raise Exception(f"Tool '{tool_name}' failed: {error_msg}")
+
                 if hasattr(result, "content") and result.content:
                     text_content = result.content[0].text
                     
