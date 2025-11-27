@@ -51,12 +51,6 @@ def fail_tool(input: FailInput) -> FailOutput:
     raise Exception(input.error_message)
 
 @mcp.tool()
-def add(input: AddInput) -> AddOutput:
-    """Add two numbers. """
-    sys.stderr.write("CALLED: add(AddInput) -> AddOutput\n")
-    return AddOutput(result=input.a + input.b)
-
-@mcp.tool()
 def subtract(input: SubtractInput) -> SubtractOutput:
     """Subtract one number from another. """
     sys.stderr.write("CALLED: subtract(SubtractInput) -> SubtractOutput\n")

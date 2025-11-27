@@ -39,7 +39,9 @@ mcp = FastMCP("Mixed 4")
 def add(input: AddInput) -> AddOutput:
     """Add two numbers. """
     sys.stderr.write("CALLED: add(AddInput) -> AddOutput\n")
-    return AddOutput(result=input.a + input.b)
+    """A tool that always fails for testing purposes."""
+    sys.stderr.write("CALLED: fail_tool(FailInput) -> FailOutput\n")
+    raise Exception(input.error_message)
 
 @mcp.tool()
 def subtract(input: SubtractInput) -> SubtractOutput:
