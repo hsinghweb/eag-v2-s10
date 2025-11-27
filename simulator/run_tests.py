@@ -155,6 +155,28 @@ async def run_simulator(start_idx, end_idx):
             
         print(f"✅ Test {test_id} Complete. Duration: {duration:.2f}s")
         
+        # Reset memory every 5 tests to prevent slowdown
+        if (i + 1) % 5 == 0:
+            print("\n🧹 Resetting Tier 1 & 2 Memory (every 5 tests)...")
+            # Clear session files
+            import glob
+            for session_file in glob.glob("memory/session_*.json"):
+                try:
+                    os.remove(session_file)
+                except:
+                    pass
+            
+            # Reset conversation memory FAISS
+            import faiss
+            EMBEDDING_DIM = 768
+            index = faiss.IndexFlatL2(EMBEDDING_DIM)
+            faiss.write_index(index, "mcp_servers/faiss_index/index.bin")
+            
+            with open("mcp_servers/faiss_index/metadata.json", 'w', encoding='utf-8') as f:
+                json.dump([], f, indent=2)
+            
+            print("✅ Memory reset complete")
+        
         # Sleep to avoid rate limits
         print("💤 Sleeping 10s...")
         time.sleep(10)
