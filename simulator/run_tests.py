@@ -156,8 +156,8 @@ async def run_simulator(start_idx, end_idx):
         print(f"✅ Test {test_id} Complete. Duration: {duration:.2f}s")
         
         # Sleep to avoid rate limits
-        print("💤 Sleeping 5s...")
-        time.sleep(5)
+        print("💤 Sleeping 10s...")
+        time.sleep(10)
 
     # Generate Reports ONCE after all tests complete
     print("\n📊 Generating HTML Reports...")
