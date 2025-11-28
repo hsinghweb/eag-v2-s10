@@ -1,62 +1,144 @@
 # EAG V2 Session 10 - Custom Multi-Agent System
 
-## Overview
-This project implements a custom Multi-Agent System (MAS) architecture where specialized agents collaborate to solve complex tasks. The system is built on a "Blackboard" pattern where agents communicate through a shared state. It now features a **Web Interface** for interactive chat and **Human-in-the-Loop (HITL)** controls for supervising agent actions.
+## 🌟 Overview
+This project implements a robust **Custom Multi-Agent System (MAS)** designed to solve complex tasks through collaboration between specialized agents. Built on a **Blackboard Architecture**, the system features a central shared state that allows agents to read and write context asynchronously.
 
-## Architecture
-The system consists of the following agents:
-- **Coordinator**: The central orchestrator that manages the agent loop. It supports both CLI and Web interfaces via an abstract `IOHandler`.
-- **Perception Agent**: Analyzes user queries and tool results to update the system's understanding (ERORLL).
-- **Decision Agent**: Plans and replans the execution strategy based on perception and memory.
-- **Executor Agent**: Safely executes the plan steps using MCP tools.
-- **Retriever Agent**: Fetches relevant context from documents and the web.
-- **Memory Agent**: Manages session history and long-term memory.
+The system is equipped with a **Tiered Memory System** (Session, Conversation, Document), **Human-in-the-Loop (HITL)** controls, and a modern **Web Interface** for interaction. It uses the **Model Context Protocol (MCP)** to integrate external tools and servers.
 
-### Web Application Stack
-- **Backend**: FastAPI with WebSockets for real-time communication.
-- **Frontend**: Single-page application (HTML/JS/TailwindCSS) with a ChatGPT-like interface.
-- **Communication**: Event-driven architecture where agent steps (Perception, Plan, Execution) are streamed to the UI.
+## 🏗️ Architecture
 
-## Data Flow
-1. **User Query** -> **Perception Agent** (Creates Snapshot)
-2. **Coordinator** -> **Retriever Agent** (Fetches Context)
-3. **Coordinator** -> **Decision Agent** (Creates Plan)
-4. **Coordinator** -> **Executor Agent** (Executes Step)
-5. **Executor Result** -> **Perception Agent** (Updates Snapshot)
-6. **Coordinator** -> **Decision Agent** (Replans/Next Step)
-7. Loop continues until the goal is achieved.
+The system follows a modular architecture where a **Coordinator** orchestrates the workflow between specialized agents.
 
-## Human-in-the-Loop (HITL)
-The system supports granular control over the agent's autonomy:
-- **Plan Approval**: Review and approve/reject the agent's proposed plan before execution starts.
-- **Step Approval**: Review each step's code and description before it runs.
-- **Feedback Loop**: Provide feedback during approval to force the agent to replan or correct its course.
+### Core Agents
+*   **Coordinator**: The central brain that manages the control flow, initializes agents, and handles I/O.
+*   **Perception Agent**: Analyzes user queries and tool outputs to update the system's understanding of the state.
+*   **Decision Agent**: Responsible for planning, replanning, and determining the next logical step.
+*   **Executor Agent**: Safely executes code and calls MCP tools based on the plan.
+*   **Retriever Agent**: Fetches relevant context from long-term memory and local documents (RAG).
+*   **Memory Agent**: Manages the tiered memory system, ensuring context is preserved across turns and sessions.
 
-These features can be toggled dynamically from the Web UI sidebar.
+### Data Flow
+1.  **User Query** → **Perception Agent** (Creates initial snapshot)
+2.  **Coordinator** → **Retriever Agent** (Fetches relevant context)
+3.  **Coordinator** → **Decision Agent** (Generates a plan)
+4.  **Coordinator** → **Executor Agent** (Executes the first step)
+5.  **Tool/Code Result** → **Perception Agent** (Updates state with result)
+6.  **Coordinator** → **Decision Agent** (Replans based on new state)
+7.  *Loop continues until the goal is achieved.*
 
-## Setup
+## ✨ Key Features
+
+### 🧠 Tiered Memory System
+1.  **Tier 1: Session Memory**: Short-term context for the current active conversation.
+2.  **Tier 2: Conversation Memory**: Long-term storage using FAISS vector database to recall facts from past conversations.
+3.  **Tier 3: Document Memory**: RAG system for retrieving information from local documents.
+
+### 🛡️ Human-in-the-Loop (HITL)
+Granular control over the agent's autonomy, togglable via the Web UI or CLI:
+*   **Plan Approval**: Review and approve the agent's proposed plan before execution begins.
+*   **Step Approval**: Review each individual step (code/tool call) before it runs.
+*   **Feedback Injection**: Provide corrections or guidance during the approval process to force replanning.
+
+### 🔌 Model Context Protocol (MCP)
+The system uses MCP to standardize tool usage. It supports multiple MCP servers configured via `config/mcp_server_config.yaml`.
+
+### 🧪 Test Simulator
+A built-in simulation framework to run batch tests, measure performance, and generate detailed HTML reports.
+
+## 🚀 Setup & Installation
 
 ### Prerequisites
-1. Install `uv`: `pip install uv`
-2. Install dependencies: `uv sync`
-3. Set `GEMINI_API_KEY` in `.env`.
+*   **Python 3.10+**
+*   **uv** (Fast Python package installer)
+*   **Git**
 
-### Running the Web Application (Recommended)
-Start the FastAPI server with hot-reload:
+### Installation
+1.  **Clone the repository:**
+    ```bash
+    git clone <repository-url>
+    cd eag-v2-s10
+    ```
+
+2.  **Install dependencies using `uv`:**
+    ```bash
+    uv sync
+    ```
+
+3.  **Configure Environment:**
+    Create a `.env` file in the root directory and add your API keys:
+    ```env
+    GEMINI_API_KEY=your_gemini_api_key_here
+    ```
+
+4.  **Configure MCP Servers:**
+    Ensure `config/mcp_server_config.yaml` is set up with your desired MCP servers.
+
+## 💻 Usage
+
+### 1. Web Interface (Recommended)
+The Web UI provides a ChatGPT-like experience with real-time updates, markdown rendering, and HITL controls.
+
+**Start the Server:**
 ```bash
 uv run uvicorn server:app --reload
 ```
-Open your browser and navigate to: `http://127.0.0.1:8000`
+*   Open your browser at: `http://127.0.0.1:8000`
+*   Use the sidebar to toggle **Plan Approval** and **Step Approval**.
 
-### Running the CLI (Legacy)
-To run the agent in the command line:
+### 2. Command Line Interface (CLI)
+For a lightweight, terminal-based experience.
+
+**Start the CLI:**
 ```bash
 uv run main.py
 ```
 
-## Dependencies
-- `google-genai`: For LLM capabilities (Gemini 2.0 Flash).
-- `mcp`: For Model Context Protocol integration.
-- `fastapi` & `uvicorn`: For the web server.
-- `websockets`: For real-time client-server communication.
-- `pydantic`: For structured data validation.
+**CLI Commands:**
+*   `/hitl on` / `/hitl off`: Toggle Plan Approval.
+*   `/step on` / `/step off`: Toggle Step Approval.
+*   `exit` / `quit`: Close the application.
+
+## 📊 Running Tests (Simulator)
+
+The project includes a comprehensive simulator to validate agent performance across various categories (Math, Memory, Web Search, RAG, Complex).
+
+**Run All Tests:**
+```bash
+uv run simulator/run_tests.py
+```
+
+**Run Specific Range:**
+```bash
+uv run simulator/run_tests.py --start 1 --end 10
+```
+
+**View Reports:**
+After the tests complete, open the generated HTML reports in your browser:
+*   `simulator/report_details.html`: Detailed breakdown of every test case.
+*   `simulator/report_stats.html`: High-level statistics and pass rates.
+
+## 📂 Project Structure
+
+```
+eag-v2-s10/
+├── agents/                 # Agent implementations (Decision, Executor, Perception, etc.)
+├── config/                 # Configuration files (MCP servers, models)
+├── mcp_servers/            # MCP server implementations and tools
+├── memory/                 # Session memory storage (JSON)
+├── memory_utils/           # Memory management logic (FAISS, initialization)
+├── simulator/              # Test simulator, test cases, and report generators
+├── static/                 # Frontend assets (HTML, JS, CSS)
+├── utils/                  # Utility functions (retry logic, etc.)
+├── agent_state.py          # Blackboard state definition
+├── coordinator.py          # Main orchestration logic
+├── main.py                 # CLI Entry point
+├── server.py               # Web Server (FastAPI) Entry point
+└── README.md               # Project documentation
+```
+
+## 🤝 Contributing
+1.  Fork the repository.
+2.  Create a feature branch.
+3.  Commit your changes.
+4.  Push to the branch.
+5.  Open a Pull Request.
